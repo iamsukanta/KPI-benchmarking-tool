@@ -1,0 +1,51 @@
+volumes:
+  benchmark_db_test:
+
+services:
+#   benchmark-api-test:
+#     container_name: benchmark-api-test
+#     build: .
+#     volumes:
+#       - ./assets/admin:/usr/src/api/assets/admin
+#     ports:
+#       - "8000:8000"
+#     networks:
+#       - volulink-test
+#     restart: always
+#     command: gunicorn -w 4 core.wsgi:application -b 0.0.0.0:8000 --timeout 1000
+
+  benchmark-db-test:
+    container_name: benchmark-db-test
+    image: mysql:8.0.39
+    restart: always
+    environment:
+      - "MYSQL_DATABASE=volulink"
+      - "MYSQL_USER=volulink"
+      - "MYSQL_PASSWORD=DV3E9C2BC6E9L1DB"
+      - "MYSQL_ROOT_PASSWORD=DV3E9C2BC6E9L1DB"
+    volumes:
+      - benchmark_db_test:/var/lib/mysql
+    networks:
+      - volulink-test
+    command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+
+#   benchmark-api-nginx-test:
+#     container_name: benchmark-api-nginx-test
+#     build:
+#       context: ./
+#       dockerfile: nginx/test/Dockerfile
+#     depends_on:
+#       - benchmark-api-test
+#     volumes:
+#       - ./assets/files:/media
+#       - ./assets/admin:/statics
+#       - ./nginx/test/certificates:/etc/nginx/certificates
+#     ports:
+#       - "8000:443"
+#     restart: always
+#     networks:
+#       - volulink-test
+
+networks:
+  volulink-test:
+    external: true

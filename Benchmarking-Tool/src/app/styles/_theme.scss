@@ -1,0 +1,17 @@
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-source-sans);
+  --color-primary: var(--color-amber-600);
+  --color-primary-hover: var(--color-amber-500);
+  --color-primary-dark: var(--color-amber-700);
+  --color-brand-50: #f0f7ff;
+  --color-brand-100: #daeeff;
+  --color-brand-200: #a6d1f7;
+  --color-brand-400: #3d96e8;
+  --color-brand-500: #1470c9;
+  --color-brand-600: #004f9e;
+  --color-brand-700: #003d7d;
+  --color-brand-700: #002d5e;
+  --color-brand-light: #f0f3f6;
+}

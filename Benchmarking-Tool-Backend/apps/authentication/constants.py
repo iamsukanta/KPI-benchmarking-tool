@@ -1,0 +1,5 @@
+ROLE_ADMIN = 'admin'
+ROLE_FEDERATION_MANAGER = 'federation_manager'
+ROLE_FACILITY_MANAGER = 'facility_manager'
+REQUEST_TYPE_LOGIN = 'login'
+REQUEST_TYPE_PASSWORD_RESET = 'password_reset'

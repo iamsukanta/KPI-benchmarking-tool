@@ -1,0 +1,53 @@
+volumes:
+  benchmark_db:
+
+services:
+  benchmark-api:
+    container_name: benchmark-api
+    build: .
+    volumes:
+      - ./assets/admin:/usr/src/api/assets/admin
+    ports:
+      - "8000:8000"
+    networks:
+      - volulink
+    restart: always
+    command: gunicorn -w 4 -k uvicorn.workers.UvicornWorker core.asgi:application -b 0.0.0.0:8000 --timeout 1000
+
+  benchmark-db:
+    container_name: benchmark-db
+    image: mysql:8.0.39
+    restart: always
+    environment:
+      - "MYSQL_DATABASE=benchmark_db"
+      - "MYSQL_USER=volulink"
+      - "MYSQL_PASSWORD=DV3E9C2BC6E9L1DB"
+      - "MYSQL_ROOT_PASSWORD=DV3E9C2BC6E9L1DB"
+    ports:
+      - "3306:3306"
+    volumes:
+      - benchmark_db:/var/lib/mysql
+    networks:
+      - volulink
+    command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+
+#   benchmark-api-nginx:
+#     container_name: benchmark-api-nginx
+#     build:
+#       context: ./
+#       dockerfile: nginx/prod/Dockerfile
+#     depends_on:
+#       - benchmark-api
+#     volumes:
+#       - ./assets/files:/media
+#       - ./assets/admin:/statics
+#       - ./nginx/prod/certificates:/etc/nginx/certificates
+#     ports:
+#       - "8000:443"
+#     restart: always
+#     networks:
+#       - volulink
+
+networks:
+  volulink:
+    external: true

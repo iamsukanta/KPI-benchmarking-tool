@@ -1,0 +1,42 @@
+{
+  "name": "benchmarking-tool-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@fortawesome/free-brands-svg-icons": "^7.1.0",
+    "@fortawesome/free-regular-svg-icons": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
+    "chart.js": "^4.5.1",
+    "exceljs": "^4.1.1",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "next": "^16.1.6",
+    "react": "19.2.3",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^10.0.2",
+    "eslint-config-next": "^0.2.4",
+    "sass": "^1.97.2",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "zod": "^4.3.5"
+  },
+  "overrides": {
+    "minimatch": ">=10.2.1",
+    "glob": ">=11.0.0",
+    "rimraf": ">=6.0.0"
+  }
+}

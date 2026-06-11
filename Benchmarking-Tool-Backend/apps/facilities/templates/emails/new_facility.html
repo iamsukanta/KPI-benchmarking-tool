@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: "Source Sans 3", Arial, Helvetica, sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: auto; }
+        .btn { 
+            background: #004f9e; 
+            color: white !important; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 5px;
+            display: block;
+            width: fit-content;
+            margin: 30px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Neue Aktivität!</h1>
+        <p>Dem System wurde eine neue {{ facility_type }} hinzugefügt.</p>
+
+        <h3>{{ facility_name }}</h3>
+
+        <p><a href="{{ administration_link }}" class="btn">Verwalten</a></p>
+    </div>
+</body>
+</html>

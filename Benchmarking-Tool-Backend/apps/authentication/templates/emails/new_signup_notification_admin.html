@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: "Source Sans 3", Arial, Helvetica, sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: auto; }
+        .logo {
+            display: block;
+            margin: 0 auto -20px auto;
+            max-width: 350px;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 30px auto;
+        }
+        .btn { 
+            color: white !important; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 5px;
+        }
+        .btn-accept { background: #004f9e; }
+        .btn-decline { background: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ logo_link }}" alt="Himmlische Herbergen" class="logo">
+
+        <h1>Beitrittsanfrage für einen neuen Benutzer</h1>
+        <p>Hallo, {{ user_name }} möchte als {{ user_role }} im {{ facility_name }} anfangen.</p>
+
+        <div class="btn-group">
+            <a href="{{ user_request_link }}" class="btn btn-accept">Los geht's</a>
+            <a href="{{ user_decline_link }}" class="btn btn-decline">Ablehnen</a>
+        </div>
+    </div>
+</body>
+</html>

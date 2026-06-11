@@ -1,0 +1,29 @@
+services:
+  benchmark-test:
+    container_name: benchmark-test
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - volulink-test
+
+  # app-nginx-test:
+  #   container_name: benchmark-nginx-test
+  #   build:
+  #     context: ./
+  #     dockerfile: nginx/test/Dockerfile
+  #   depends_on:
+  #     - benchmark-test
+  #   volumes:
+  #     - ./nginx/test/certificates:/etc/nginx/certificates
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   restart: always
+  #   networks:
+  #     - volulink-test
+
+networks:
+  volulink-test:
+    external: true

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: "Source Sans 3", Arial, Helvetica, sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 600px; margin: auto; }
+        .logo {
+            display: block;
+            margin: 0 auto -20px auto;
+            max-width: 350px;
+        }
+        .btn { 
+            background: #004f9e; 
+            color: white !important; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 5px;
+            display: block;
+            width: fit-content;
+            margin: 30px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ logo_link }}" alt="Himmlische Herbergen" class="logo">
+        <h1>Willkommen, {{ user_name }}! 👋</h1>
+        <p>Vielen Dank für Ihre Anmeldung. Ihre Anfrage, als {{ user_role }} im {{ facility_name }} einzusteigen, ist eingegangen.</p>
+        <p>Ihre registrierte E-Mail-Adresse: <strong>{{ user_email }}</strong></p>
+        <p>Ihr Passwort (bitte nicht weitergeben 😉): <strong>{{ user_password }}</strong></p>
+
+        <p><a href="{{ get_started_link }}" class="btn">Los geht's</a></p>
+
+        <hr>
+        <small>Falls Sie sich nicht angemeldet haben, ignorieren Sie diese E-Mail bitte.</small>
+    </div>
+</body>
+</html>
