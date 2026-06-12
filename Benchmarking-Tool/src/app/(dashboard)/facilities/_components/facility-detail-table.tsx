@@ -285,15 +285,15 @@ export default function FacilityDetailTable({ id }: { id: string }) {
                 rooms_sold: calculateTrend(detail.rooms_sold, prev?.rooms_sold),
                 total_revenue: calculateTrend(detail.total_revenue, prev?.total_revenue),
                 total_costs: calculateTrend(detail.total_costs, prev?.total_costs),
-                income_from_donations: calculateTrend(detail.income_from_donations, prev?.income_from_donations),
-                income_from_conferences: calculateTrend(detail.income_from_conferences, prev?.income_from_conferences),
-                income_from_catering: calculateTrend(detail.income_from_catering, prev?.income_from_catering),
-                income_from_accomodation: calculateTrend(detail.income_from_accomodation, prev?.income_from_accomodation),
+                donations_subsidies_income: calculateTrend(detail.donations_subsidies_income, prev?.donations_subsidies_income),
+                other_income: calculateTrend(detail.other_income, prev?.other_income),
+                catering_income: calculateTrend(detail.catering_income, prev?.catering_income),
+                accommodation_income: calculateTrend(detail.accommodation_income, prev?.accommodation_income),
                 personnel_costs: calculateTrend(detail.personnel_costs, prev?.personnel_costs),
-                catering_costs: calculateTrend(detail.catering_costs, prev?.catering_costs),
+                material_goods_costs: calculateTrend(detail.material_goods_costs, prev?.material_goods_costs),
                 energy_costs: calculateTrend(detail.energy_costs, prev?.energy_costs),
-                cleaning_costs: calculateTrend(detail.cleaning_costs, prev?.cleaning_costs),
-                maintenance_costs: calculateTrend(detail.maintenance_costs, prev?.maintenance_costs),
+                outsourced_services_costs: calculateTrend(detail.outsourced_services_costs, prev?.outsourced_services_costs),
+                other_operating_costs: calculateTrend(detail.other_operating_costs, prev?.other_operating_costs),
               };
 
               return (
@@ -387,29 +387,29 @@ export default function FacilityDetailTable({ id }: { id: string }) {
                           <StatCard
                             icon={faHandHoldingHeart} iconBg="bg-pink-100" iconColor="text-pink-600"
                             cardBg="bg-pink-50/50" borderColor="border-pink-100"
-                            label="Spenden" labelColor="text-pink-700"
-                            value={detail.income_from_donations} trend={trends.income_from_donations}
+                            label="Spenden & Zuschüsse" labelColor="text-pink-700"
+                            value={detail.donations_subsidies_income} trend={trends.donations_subsidies_income}
                             formatter={formatCurrency}
                           />
                           <StatCard
                             icon={faMicrophone} iconBg="bg-brand-100" iconColor="text-brand-600"
                             cardBg="bg-brand-50/50" borderColor="border-brand-100"
-                            label="Konferenzen" labelColor="text-brand-700"
-                            value={detail.income_from_conferences} trend={trends.income_from_conferences}
+                            label="Sonstige Einnahmen" labelColor="text-brand-700"
+                            value={detail.other_income} trend={trends.other_income}
                             formatter={formatCurrency}
                           />
                           <StatCard
                             icon={faUtensils} iconBg="bg-orange-100" iconColor="text-orange-600"
                             cardBg="bg-orange-50/50" borderColor="border-orange-100"
-                            label="Beköstigung" labelColor="text-orange-700"
-                            value={detail.income_from_catering} trend={trends.income_from_catering}
+                            label="Verpflegung" labelColor="text-orange-700"
+                            value={detail.catering_income} trend={trends.catering_income}
                             formatter={formatCurrency}
                           />
                           <StatCard
                             icon={faHotel} iconBg="bg-teal-100" iconColor="text-teal-600"
                             cardBg="bg-teal-50/50" borderColor="border-teal-100"
                             label="Unterkunft" labelColor="text-teal-700"
-                            value={detail.income_from_accomodation} trend={trends.income_from_accomodation}
+                            value={detail.accommodation_income} trend={trends.accommodation_income}
                             formatter={formatCurrency}
                           />
                         </Section>
@@ -425,8 +425,8 @@ export default function FacilityDetailTable({ id }: { id: string }) {
                           <StatCard
                             icon={faUtensils} iconBg="bg-amber-100" iconColor="text-amber-600"
                             cardBg="bg-amber-50/50" borderColor="border-amber-100"
-                            label="Beköstigung" labelColor="text-amber-700"
-                            value={detail.catering_costs} trend={trends.catering_costs}
+                            label="Material / Wareneinkauf" labelColor="text-amber-700"
+                            value={detail.material_goods_costs} trend={trends.material_goods_costs}
                             formatter={formatCurrency} inverse
                           />
                           <StatCard
@@ -439,15 +439,15 @@ export default function FacilityDetailTable({ id }: { id: string }) {
                           <StatCard
                             icon={faBroom} iconBg="bg-lime-100" iconColor="text-lime-600"
                             cardBg="bg-lime-50/50" borderColor="border-lime-100"
-                            label="Reinigung" labelColor="text-lime-700"
-                            value={detail.cleaning_costs} trend={trends.cleaning_costs}
+                            label="Fremdfirmen" labelColor="text-lime-700"
+                            value={detail.outsourced_services_costs} trend={trends.outsourced_services_costs}
                             formatter={formatCurrency} inverse
                           />
                           <StatCard
                             icon={faWrench} iconBg="bg-slate-100" iconColor="text-slate-600"
                             cardBg="bg-slate-50/50" borderColor="border-slate-200"
-                            label="Wartung" labelColor="text-slate-600"
-                            value={detail.maintenance_costs} trend={trends.maintenance_costs}
+                            label="Sonstige Sachkosten" labelColor="text-slate-600"
+                            value={detail.other_operating_costs} trend={trends.other_operating_costs}
                             formatter={formatCurrency} inverse
                           />
                         </Section>

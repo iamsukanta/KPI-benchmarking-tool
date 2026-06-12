@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Category, Facility, FacilityDetail
+from .constants import V2_ALL_INPUT_FIELDS, is_v2_eligible
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -24,6 +25,16 @@ class FacilityDetailSerializer(serializers.ModelSerializer):
                 'write_only': True
             }
         }
+
+    def get_fields(self):
+        """Hide the V2 cost/group/personnel fields for categories that are not
+        V2-eligible (Cat.3 + Cat.4). Requires the facility in serializer context."""
+        fields = super().get_fields()
+        facility = self.context.get('facility')
+        if facility is not None and not is_v2_eligible(facility.category):
+            for field_name in V2_ALL_INPUT_FIELDS:
+                fields.pop(field_name, None)
+        return fields
 
 
 class FederationSerializer(serializers.ModelSerializer):
@@ -101,6 +112,7 @@ class FacilityWithDetailSerializer(FacilitySerializer):
 class FacilityDetailRetrieveSerializer(FacilityDetailSerializer):
     facility_id = serializers.IntegerField(source='facility.id')
     facility_name = serializers.CharField(source='facility.name')
+    category_name = serializers.CharField(source='facility.category.name', allow_null=True)
     federation_id = serializers.IntegerField(source='facility.federation_id', allow_null=True)
     federation_name = serializers.CharField(source='facility.federation.name', allow_null=True)
     beds = serializers.IntegerField(source='facility.beds')

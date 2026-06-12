@@ -55,8 +55,9 @@ type CategoryWideBenchmarkChartData = {
     help_text: string;
     unit: string;
   }[];
-  my_data: number[];
-  category_data: number[];
+  // V2 KPIs return null when uncomputable or suppressed by the min-5 rule.
+  my_data: (number | null)[];
+  category_data: (number | null)[];
 }
 
 type CategoryWideBenchmarkSection = {
@@ -64,6 +65,9 @@ type CategoryWideBenchmarkSection = {
   revenue_kpis: CategoryWideBenchmarkChartData;
   cost_efficiency_kpis: CategoryWideBenchmarkChartData;
   category_specific_kpis: CategoryWideBenchmarkChartData;
+  // V2 / Netzwerk-2 groups — present only for cat.1 + cat.2 facilities.
+  group_event_kpis?: CategoryWideBenchmarkChartData;
+  personnel_area_kpis?: CategoryWideBenchmarkChartData;
 }
 
 export type CategoryWideBenchmark = {

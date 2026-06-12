@@ -28,6 +28,8 @@ const KPI_SECTIONS: {
   { key: "revenue_kpis",           label: "Erlöskennzahlen",                   tabColor: C.emerald },
   { key: "cost_efficiency_kpis",   label: "Kosten & Effizienzkennzahlen",      tabColor: C.amberLight },
   { key: "category_specific_kpis", label: "Kategorie-spezifische Kennzahlen",  tabColor: C.purple },
+  { key: "group_event_kpis",       label: "Gruppen & Veranstaltungen",         tabColor: C.brand },
+  { key: "personnel_area_kpis",    label: "Personalkosten je Bereich",         tabColor: C.emerald },
 ];
 
 // ─── LabelEntry ───────────────────────────────────────────────────────────────
@@ -54,7 +56,8 @@ function normaliseLabelEntry(entry: unknown): LabelEntry {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtNum(value: number | undefined | null): number | string {
-  if (value === undefined || value === null || isNaN(value as number)) return "—";
+  if (value === null) return "nicht berechenbar";
+  if (value === undefined || isNaN(value as number)) return "—";
   return value as number;
 }
 
@@ -68,22 +71,22 @@ function fmtWithUnit(value: number | undefined | null, unit?: string): number | 
   return base;
 }
 
-function deltaText(my: number, cat: number): string {
-  if (cat === 0) return "—";
+function deltaText(my: number | null, cat: number | null): string {
+  if (my === null || cat === null || cat === 0) return "—";
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return "≈ Parity";
   return (pct > 0 ? "▲ " : "▼ ") + Math.abs(pct).toFixed(1) + "%";
 }
 
-function deltaFill(my: number, cat: number): string {
-  if (cat === 0) return C.lightGrey;
+function deltaFill(my: number | null, cat: number | null): string {
+  if (my === null || cat === null || cat === 0) return C.lightGrey;
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return C.lightGrey;
   return pct > 0 ? "FFD1FAE5" : "FFFEE2E2";
 }
 
-function deltaFontColor(my: number, cat: number): string {
-  if (cat === 0) return C.grey;
+function deltaFontColor(my: number | null, cat: number | null): string {
+  if (my === null || cat === null || cat === 0) return C.grey;
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return C.grey;
   return pct > 0 ? C.green : C.red;
@@ -237,8 +240,8 @@ function addKpiSheet(
     const aggData    = benchmark[aggKey] as CategoryWideBenchmark["median"];
     const sectionData = aggData[sectionKey] as {
       labels: unknown[];
-      my_data: number[];
-      category_data: number[];
+      my_data: (number | null)[];
+      category_data: (number | null)[];
       q1?: number[];
       q3?: number[];
       participant_count?: number[];
@@ -307,8 +310,8 @@ function addKpiSheet(
 
     // ── Data rows ──────────────────────────────────────────────────────────
     labelEntries.forEach((entry, i) => {
-      const my       = my_data[i]       ?? 0;
-      const cat      = category_data[i] ?? 0;
+      const my       = my_data[i]       ?? null;
+      const cat      = category_data[i] ?? null;
       const unit     = entry.unit ?? "";
       const rowFill  = i % 2 === 0 ? C.white : C.lightGrey;
       const hasHelp  = !!entry.help_text?.trim();
@@ -417,7 +420,7 @@ function addKpiSheet(
 
       // ── Status ────────────────────────────────────────────────────────
       const statusCell = ws.getCell(currentRow, col++);
-      if (cat !== 0) {
+      if (my !== null && cat !== null && cat !== 0) {
         const pct = ((my - cat) / cat) * 100;
         if (Math.abs(pct) < 0.5) {
           statusCell.value = "≈ Im Schnitt";
@@ -488,6 +491,8 @@ export async function exportBenchmarkExcel({
   addCoverSheet(wb, facilityName, categoryName, year);
 
   KPI_SECTIONS.forEach(({ key, label, tabColor }) => {
+    // Skip V2 sections (group/event, personnel) that are absent for cat.3 + cat.4.
+    if (!benchmark.median?.[key]) return;
     addKpiSheet(wb, key, label, tabColor, facilityName, benchmark);
   });
 

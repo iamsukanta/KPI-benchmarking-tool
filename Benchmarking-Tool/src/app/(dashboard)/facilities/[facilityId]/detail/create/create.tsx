@@ -24,14 +24,14 @@ export default function FacilityDetailCreateFormPage({
     guests: "",
     rooms_sold: "",
     personnel_costs: "",
-    catering_costs: "",
+    material_goods_costs: "",
     energy_costs: "",
-    cleaning_costs: "",
-    maintenance_costs: "",
-    income_from_donations: "",
-    income_from_conferences: "",
-    income_from_catering: "",
-    income_from_accomodation: "",
+    outsourced_services_costs: "",
+    other_operating_costs: "",
+    donations_subsidies_income: "",
+    other_income: "",
+    catering_income: "",
+    accommodation_income: "",
     is_published: true
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -65,12 +65,10 @@ export default function FacilityDetailCreateFormPage({
     }
 
     try {
-      const { rooms_sold, cleaning_costs, ...rest } = result.data;
-      const payload = {
-        ...rest,
-        ...(rooms_sold?.length ? { rooms_sold } : {}),
-        ...(cleaning_costs?.length ? { cleaning_costs } : {}),
-      };
+      // Drop empty optional values so nullable fields are sent as absent, not "".
+      const payload = Object.fromEntries(
+        Object.entries(result.data).filter(([, value]) => value !== "" && value !== undefined)
+      ) as typeof result.data;
       const res = await createFacilityDetail(facilityId, payload);
       if (res.status === 'success') {
         router.replace(`/facilities/${facilityId}/detail`);
@@ -115,6 +113,7 @@ export default function FacilityDetailCreateFormPage({
         setErrorsAction={setErrors}
         onSubmitAction={handleSubmit}
         submitting={submitting}
+        categoryName={facility?.category_name}
       />
     </div>
   );

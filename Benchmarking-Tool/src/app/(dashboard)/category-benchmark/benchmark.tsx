@@ -28,6 +28,8 @@ import {
   faFileExcel,
   faSpinner,
   faCircleInfo,
+  faUsers,
+  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 import { CategoryWideBenchmark } from "@/lib/types/benchmark";
 
@@ -127,6 +129,20 @@ const KPI_SECTIONS: {
     color: "purple",
     chartType: "bar-horizontal",
   },
+  {
+    key: "group_event_kpis",
+    label: "Gruppen & Veranstaltungen",
+    icon: faUsers,
+    color: "brand",
+    chartType: "bar",
+  },
+  {
+    key: "personnel_area_kpis",
+    label: "Personalkosten je Bereich",
+    icon: faUserTie,
+    color: "emerald",
+    chartType: "bar-horizontal",
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -141,6 +157,12 @@ function formatValue(value: number): string {
 function formatWithUnit(value: number, unit?: string): string {
   const base = formatValue(value);
   return unit ? `${base} ${unit}` : base;
+}
+
+/** Render a KPI value, showing "nicht berechenbar" for NULL (R001). */
+function formatCellValue(value: number | null | undefined, unit?: string): string {
+  if (value === null || value === undefined) return "nicht berechenbar";
+  return formatWithUnit(value, unit);
 }
 
 /** Normalise a labels array: accept both raw strings (legacy) and LabelEntry objects */
@@ -184,11 +206,12 @@ function DeltaBadge({
   cat,
   reverse = false,
 }: {
-  my: number;
-  cat: number;
+  my: number | null;
+  cat: number | null;
   reverse?: boolean;
 }) {
-  if (cat === 0) return <span className="text-xs text-slate-400">—</span>;
+  if (my === null || cat === null || cat === 0)
+    return <span className="text-xs text-slate-400">—</span>;
   const pct = ((my - cat) / cat) * 100;
   const neutral = Math.abs(pct) < 0.5;
   if (neutral)
@@ -311,8 +334,8 @@ function SectionChart({
 }: {
   chartType: ChartType;
   labelEntries: LabelEntry[];
-  myData: number[];
-  catData: number[];
+  myData: (number | null)[];
+  catData: (number | null)[];
   facilityName: string;
   catLabel: string;
   colors: (typeof COLOR_MAP)[keyof typeof COLOR_MAP];
@@ -622,12 +645,14 @@ export default function Benchmark({
       {/* ── KPI sections ────────────────────────────────────────────── */}
       {KPI_SECTIONS.map((section) => {
         const sectionData = aggData[section.key];
+        // V2 sections (group/event, personnel) are absent for cat.3 + cat.4.
+        if (!sectionData) return null;
 
         const labelEntries: LabelEntry[] = (sectionData.labels as unknown[]).map(
           normaliseLabelEntry
         );
-        const myData: number[] = sectionData.my_data;
-        const catData: number[] = sectionData.category_data;
+        const myData: (number | null)[] = sectionData.my_data;
+        const catData: (number | null)[] = sectionData.category_data;
 
         const colors = COLOR_MAP[section.color];
         const chartHeight =
@@ -701,16 +726,16 @@ export default function Benchmark({
                             </div>
                             <div className="shrink-0 text-right space-y-1">
                               <div className="text-xs font-bold text-slate-900 tabular-nums">
-                                {formatWithUnit(myData[i] ?? 0, entry.unit)}
+                                {formatCellValue(myData[i], entry.unit)}
                               </div>
                               <div className="text-xs text-slate-400 tabular-nums">
-                                Kat. {formatWithUnit(catData[i] ?? 0, entry.unit)}
+                                Kat. {formatCellValue(catData[i], entry.unit)}
                               </div>
                               <div>
                                 {section.label === "Kosten & Effizienzkennzahlen" ? (
-                                  <DeltaBadge my={myData[i] ?? 0} cat={catData[i] ?? 0} reverse={true} />
+                                  <DeltaBadge my={myData[i]} cat={catData[i]} reverse={true} />
                                 ) : (
-                                  <DeltaBadge my={myData[i] ?? 0} cat={catData[i] ?? 0} />
+                                  <DeltaBadge my={myData[i]} cat={catData[i]} />
                                 )}
                               </div>
                             </div>
@@ -734,16 +759,16 @@ export default function Benchmark({
                           )}
                         </td>
                         <td className="hidden xl:table-cell py-3 px-2 text-right font-semibold text-slate-900 tabular-nums align-top">
-                          {formatWithUnit(myData[i] ?? 0, entry.unit)}
+                          {formatCellValue(myData[i], entry.unit)}
                         </td>
                         <td className="hidden xl:table-cell py-3 text-right text-slate-500 tabular-nums align-top">
-                          {formatWithUnit(catData[i] ?? 0, entry.unit)}
+                          {formatCellValue(catData[i], entry.unit)}
                         </td>
                         <td className="hidden xl:table-cell py-3 px-2 text-right align-top">
                           {section.label === "Kosten & Effizienzkennzahlen" ? (
-                            <DeltaBadge my={myData[i] ?? 0} cat={catData[i] ?? 0} reverse={true} />
+                            <DeltaBadge my={myData[i]} cat={catData[i]} reverse={true} />
                           ) : (
-                            <DeltaBadge my={myData[i] ?? 0} cat={catData[i] ?? 0} />
+                            <DeltaBadge my={myData[i]} cat={catData[i]} />
                           )}
                         </td>
                       </tr>

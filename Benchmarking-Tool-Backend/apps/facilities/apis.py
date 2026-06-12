@@ -237,7 +237,7 @@ class FacilityApi(ViewSet):
                 is_user_approved=True
             )
         )
-        serializer = FacilityWithDetailSerializer(facility)
+        serializer = FacilityWithDetailSerializer(facility, context={'facility': facility})
         return SuccessWithResultsResponse(serializer.data)
     
     @staticmethod
@@ -283,7 +283,7 @@ class FacilityApi(ViewSet):
         )
         data = request.data.copy()
         data['facility'] = facility.id
-        serializer = FacilityDetailSerializer(data=data)
+        serializer = FacilityDetailSerializer(data=data, context={'facility': facility})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return SuccessWithMessageResponse('The facility\'s detail has been successfully updated.')
@@ -291,26 +291,34 @@ class FacilityApi(ViewSet):
     @action(methods=['get'], detail=True, url_path=r'detail/(?P<facility_detail_pk>[^/.]+)')
     def retrieve_detail(self, request: Request, pk: int, facility_detail_pk: int) -> SuccessWithResultsResponse:
         facility_detail = get_object_or_404(
-            FacilityDetail.objects.select_related('facility__federation'),
+            FacilityDetail.objects.select_related('facility__federation', 'facility__category'),
             pk=facility_detail_pk,
             facility_id=pk,
             facility__user=request.user,
             facility__is_user_approved=True
         )
-        serializer = FacilityDetailRetrieveSerializer(facility_detail)
+        serializer = FacilityDetailRetrieveSerializer(
+            facility_detail,
+            context={'facility': facility_detail.facility}
+        )
         return SuccessWithResultsResponse(serializer.data)
-    
+
     @staticmethod
     @retrieve_detail.mapping.put
     def update_unpublished_detail(request: Request, pk: int, facility_detail_pk: int) -> SuccessWithMessageResponse:
         facility_detail = get_object_or_404(
-            FacilityDetail,
+            FacilityDetail.objects.select_related('facility__category'),
             pk=facility_detail_pk,
             facility_id=pk,
             facility__user=request.user,
             facility__is_user_approved=True
         )
-        serializer = FacilityDetailSerializer(facility_detail, data=request.data, partial=True)
+        serializer = FacilityDetailSerializer(
+            facility_detail,
+            data=request.data,
+            partial=True,
+            context={'facility': facility_detail.facility}
+        )
         serializer.is_valid(raise_exception=True)
 
         if serializer.validated_data['is_published']:
@@ -534,11 +542,11 @@ class MasterDataApi(ViewSet):
             'rooms_sold': 18,
             'overnight_stays': 25,
             'total_revenue': 28,
-            'income_from_donations': 29,
+            'donations_subsidies_income': 29,
             'personnel_costs': 33,
-            'catering_costs': 32,
+            'material_goods_costs': 32,
             'energy_costs': 34,
-            'maintenance_costs': 35,
+            'other_operating_costs': 35,
         }
 
         FIRST_DATA_COL = 1
@@ -566,12 +574,12 @@ class MasterDataApi(ViewSet):
                     'rooms_sold': self.safe_int(self.get_cell(sheet, ROW['rooms_sold'], col)) or 0,
                     'overnight_stays': self.safe_int(self.get_cell(sheet, ROW['overnight_stays'], col)) or 0,
                     'total_revenue': self.safe_decimal(self.get_cell(sheet, ROW['total_revenue'], col)) or Decimal('0.00'),
-                    'income_from_donations': self.safe_decimal(self.get_cell(sheet, ROW['income_from_donations'], col)),
+                    'donations_subsidies_income': self.safe_decimal(self.get_cell(sheet, ROW['donations_subsidies_income'], col)),
                     'personnel_costs': self.safe_decimal(self.get_cell(sheet, ROW['personnel_costs'], col)) or Decimal('0.00'),
-                    'catering_costs': self.safe_decimal(self.get_cell(sheet, ROW['catering_costs'], col)) or Decimal('0.00'),
+                    'material_goods_costs': self.safe_decimal(self.get_cell(sheet, ROW['material_goods_costs'], col)) or Decimal('0.00'),
                     'energy_costs': self.safe_decimal(self.get_cell(sheet, ROW['energy_costs'], col)) or Decimal('0.00'),
-                    'cleaning_costs': Decimal('0.00'),
-                    'maintenance_costs': self.safe_decimal(self.get_cell(sheet, ROW['maintenance_costs'], col)) or Decimal('0.00'),
+                    'outsourced_services_costs': Decimal('0.00'),
+                    'other_operating_costs': self.safe_decimal(self.get_cell(sheet, ROW['other_operating_costs'], col)) or Decimal('0.00'),
                 },
             })
             col += 2
