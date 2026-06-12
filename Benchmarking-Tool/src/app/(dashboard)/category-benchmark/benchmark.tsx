@@ -209,10 +209,14 @@ function DeltaBadge({
   my,
   cat,
   reverse = false,
+  invert = false,
 }: {
   my: number | null;
   cat: number | null;
   reverse?: boolean;
+  /** Cost metric where higher-than-benchmark is bad: show the Differenz with an
+   *  inverted sign (above benchmark → negative, below → positive). */
+  invert?: boolean;
 }) {
   if (my === null || cat === null || cat === 0)
     return <span className="text-xs text-slate-400">-</span>;
@@ -226,6 +230,21 @@ function DeltaBadge({
       </span>
     );
   const up = pct > 0;
+
+  if (invert) {
+    // Below-benchmark cost (pct < 0) is the good outcome → positive, green, up.
+    const good = pct < 0;
+    return (
+      <span
+        className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+          good ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+        }`}
+      >
+        <FontAwesomeIcon icon={good ? faArrowUp : faArrowDown} className="w-2.5 h-2.5" />
+        {good ? "+" : "-"}{round2HalfUp(Math.abs(pct))}%
+      </span>
+    );
+  }
 
   if (reverse) {
     return (
@@ -736,11 +755,12 @@ export default function Benchmark({
                                 Kat. {formatCellValue(catData[i], entry.unit)}
                               </div>
                               <div>
-                                {section.label === "Kosten & Effizienzkennzahlen" ? (
-                                  <DeltaBadge my={myData[i]} cat={catData[i]} reverse={true} />
-                                ) : (
-                                  <DeltaBadge my={myData[i]} cat={catData[i]} />
-                                )}
+                                <DeltaBadge
+                                  my={myData[i]}
+                                  cat={catData[i]}
+                                  reverse={section.key === "cost_efficiency_kpis"}
+                                  invert={section.key === "personnel_area_kpis"}
+                                />
                               </div>
                             </div>
                           </div>
@@ -769,11 +789,12 @@ export default function Benchmark({
                           {formatCellValue(catData[i], entry.unit)}
                         </td>
                         <td className="hidden xl:table-cell py-3 px-2 text-right align-top">
-                          {section.label === "Kosten & Effizienzkennzahlen" ? (
-                            <DeltaBadge my={myData[i]} cat={catData[i]} reverse={true} />
-                          ) : (
-                            <DeltaBadge my={myData[i]} cat={catData[i]} />
-                          )}
+                          <DeltaBadge
+                            my={myData[i]}
+                            cat={catData[i]}
+                            reverse={section.key === "cost_efficiency_kpis"}
+                            invert={section.key === "personnel_area_kpis"}
+                          />
                         </td>
                       </tr>
                     ))}

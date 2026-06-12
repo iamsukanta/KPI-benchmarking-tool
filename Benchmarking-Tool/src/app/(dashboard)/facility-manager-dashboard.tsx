@@ -39,6 +39,8 @@ export default function FacilityManagerDashboard({ results }: { results: Dashboa
     acc.previousRevenue += facility.previous_year.total_revenue;
     acc.previousCosts += facility.previous_year.total_costs;
     acc.previousStays += facility.previous_year.overnight_stays;
+    // Real annual capacity per facility: beds × its own opening days.
+    acc.totalCapacity += facility.beds * (facility.opening_days_per_year ?? 0);
 
     if (!acc.currentYear) acc.currentYear = facility.current_year.year;
     if (!acc.previousYear) acc.previousYear = facility.previous_year.year;
@@ -47,6 +49,7 @@ export default function FacilityManagerDashboard({ results }: { results: Dashboa
     totalFacilities: 0,
     totalBeds: 0,
     totalRooms: 0,
+    totalCapacity: 0,
     currentRevenue: 0,
     currentCosts: 0,
     currentStays: 0,
@@ -62,14 +65,11 @@ export default function FacilityManagerDashboard({ results }: { results: Dashboa
 
   const revenueGrowth = safeDivide(aggregatedStats.currentRevenue - aggregatedStats.previousRevenue, aggregatedStats.previousRevenue) * 100;
   const costsGrowth = safeDivide(aggregatedStats.currentCosts - aggregatedStats.previousCosts, aggregatedStats.previousCosts) * 100;
-  const profitGrowth = safeDivide(currentProfit - previousProfit, previousProfit) * 100;
+  // Use |previousProfit| as the base so a recovery from a loss reads as positive growth.
+  const profitGrowth = safeDivide(currentProfit - previousProfit, Math.abs(previousProfit)) * 100;
   const staysGrowth = safeDivide(aggregatedStats.currentStays - aggregatedStats.previousStays, aggregatedStats.previousStays) * 100;
 
-  const avgOpeningDaysPerYear = facilitiesData.length > 0
-    ? facilitiesData.map(f => f?.opening_days_per_year ?? 0).reduce((acc, cur) => acc + cur, 0) / facilitiesData.length
-    : 0;
-  const totalCapacity = aggregatedStats.totalBeds * avgOpeningDaysPerYear;
-  const avgOccupancy = safeDivide(aggregatedStats.currentStays, totalCapacity) * 100;
+  const avgOccupancy = safeDivide(aggregatedStats.currentStays, aggregatedStats.totalCapacity) * 100;
 
   const aggregatedRevenueData: ChartData<"bar", number[], string> = {
     labels: ['Gesamtumsatz', 'Gesamtkosten', 'Reingewinn'],
@@ -382,10 +382,10 @@ export default function FacilityManagerDashboard({ results }: { results: Dashboa
           {facilitiesData.map((facility) => {
             const profit = facility.current_year.total_revenue - facility.current_year.total_costs;
             const profitMargin = safeDivide(profit, facility.current_year.total_revenue) * 100;
-            const occupancy = safeDivide(facility.current_year.overnight_stays, facility.beds * 365) * 100;
+            const occupancy = safeDivide(facility.current_year.overnight_stays, facility.beds * (facility.opening_days_per_year ?? 0)) * 100;
 
             const prevProfit = facility.previous_year.total_revenue - facility.previous_year.total_costs;
-            const profitChange = safeDivide(profit - prevProfit, prevProfit) * 100;
+            const profitChange = safeDivide(profit - prevProfit, Math.abs(prevProfit)) * 100;
 
             return (
               <div

@@ -59,7 +59,9 @@ function formatNumber(value: number) {
 
 function pct(a: number, b: number) {
   if (!b) return 0;
-  return ((a - b) / b) * 100;
+  // Divide by |b| so a recovery from a negative base (e.g. loss → profit) reads
+  // as positive growth instead of an inverted-sign value.
+  return ((a - b) / Math.abs(b)) * 100;
 }
 
 function aggregateFacilities(facilities: FacilityStat[]) {
@@ -73,12 +75,14 @@ function aggregateFacilities(facilities: FacilityStat[]) {
       acc.previousRevenue += f.previous_year.total_revenue;
       acc.previousCosts += f.previous_year.total_costs;
       acc.previousStays += f.previous_year.overnight_stays;
+      // Real annual capacity per facility: beds × its own opening days.
+      acc.capacity += f.beds * (f.opening_days_per_year ?? 0);
       if (!acc.currentYear) acc.currentYear = f.current_year.year;
       if (!acc.previousYear) acc.previousYear = f.previous_year.year;
       return acc;
     },
     {
-      beds: 0, rooms: 0,
+      beds: 0, rooms: 0, capacity: 0,
       currentRevenue: 0, currentCosts: 0, currentStays: 0,
       previousRevenue: 0, previousCosts: 0, previousStays: 0,
       currentYear: 0, previousYear: 0,
@@ -221,7 +225,7 @@ function FederationView({ federation }: { federation: FederationStat }) {
   const costsGrowth = pct(stats.currentCosts, stats.previousCosts);
   const profitGrowth = pct(currentProfit, previousProfit);
   const staysGrowth = pct(stats.currentStays, stats.previousStays);
-  const avgOccupancy = stats.beds ? (stats.currentStays / (stats.beds * 365)) * 100 : 0;
+  const avgOccupancy = stats.capacity ? (stats.currentStays / stats.capacity) * 100 : 0;
 
   const combinedChartData: ChartData<"bar", number[], string> = {
     labels: ['Total Revenue', 'Total Costs', 'Net Profit'],
@@ -433,7 +437,7 @@ function AllFederationsView({ federations }: { federations: FederationStat[] }) 
       {
         label: 'Avg Occupancy %',
         data: fedStats.map(f =>
-          f.stats.beds ? (f.stats.currentStays / (f.stats.beds * 365)) * 100 : 0
+          f.stats.capacity ? (f.stats.currentStays / f.stats.capacity) * 100 : 0
         ),
         backgroundColor: 'rgba(168, 85, 247, 0.8)',
         borderColor: 'rgba(168, 85, 247, 1)',
@@ -487,7 +491,7 @@ function AllFederationsView({ federations }: { federations: FederationStat[] }) 
           />
           <KpiCard icon={faPercent} iconBg="bg-purple-100" iconColor="text-purple-600"
             label="Avg Occupancy"
-            value={`${total.beds ? ((total.currentStays / (total.beds * 365)) * 100).toFixed(1) : 0}%`}
+            value={`${total.capacity ? ((total.currentStays / total.capacity) * 100).toFixed(1) : 0}%`}
             growth={pct(total.currentStays, total.previousStays)}
             sub={`${formatNumber(total.currentStays)} total stays`} />
         </div>
@@ -533,8 +537,8 @@ function AllFederationsView({ federations }: { federations: FederationStat[] }) 
         <h3 className="text-lg font-bold text-slate-800 mb-4">Zusammenbruch der Föderation</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {fedStats.map((fed) => {
-            const occupancy = fed.stats.beds
-              ? (fed.stats.currentStays / (fed.stats.beds * 365)) * 100 : 0;
+            const occupancy = fed.stats.capacity
+              ? (fed.stats.currentStays / fed.stats.capacity) * 100 : 0;
             const margin = fed.stats.currentRevenue
               ? (fed.profit / fed.stats.currentRevenue) * 100 : 0;
             const revGrowth = pct(fed.stats.currentRevenue, fed.stats.previousRevenue);

@@ -62,7 +62,8 @@ function fmt(value: number | undefined | null): string {
   const v = value as number;
   if (Math.abs(v) >= 1_000_000) return round2HalfUp(v / 1_000_000) + "M";
   if (Math.abs(v) >= 1_000) return round2HalfUp(v / 1_000) + "k";
-  return round2HalfUp(v).toLocaleString("de-DE");
+  // Dot decimal notation (e.g. 1,234.56) to match the Excel export and the UI.
+  return round2HalfUp(v).toLocaleString("en-US");
 }
 
 function fmtWithUnit(value: number | undefined | null, unit?: string): string {
@@ -70,18 +71,21 @@ function fmtWithUnit(value: number | undefined | null, unit?: string): string {
   return unit && typeof value === "number" && isFinite(value) ? `${base} ${unit}` : base;
 }
 
-function delta(my: number | null, cat: number | null): string {
+/** invert: cost metric where higher-than-benchmark is bad → shown as negative. */
+function delta(my: number | null, cat: number | null, invert = false): string {
   if (my === null || cat === null || cat === 0) return "-";
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return "~ Gleichstand";
-  return (pct > 0 ? "+ " : "- ") + round2HalfUp(Math.abs(pct)) + "%";
+  const good = invert ? pct < 0 : pct > 0;
+  return (good ? "+ " : "- ") + round2HalfUp(Math.abs(pct)) + "%";
 }
 
-function deltaColor(my: number | null, cat: number | null): [number, number, number] {
+function deltaColor(my: number | null, cat: number | null, invert = false): [number, number, number] {
   if (my === null || cat === null || cat === 0) return BRAND.grey;
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return BRAND.grey;
-  return pct > 0 ? BRAND.green : BRAND.red;
+  const good = invert ? pct < 0 : pct > 0;
+  return good ? BRAND.green : BRAND.red;
 }
 
 function drawTitlePage(
@@ -223,6 +227,7 @@ function drawAggregationBlock(
 
     const { my_data, category_data, q1, q3, participant_count, min_values, max_values } =
       sectionData;
+    const invert = section.key === "personnel_area_kpis";
 
     y = drawSectionHeader(doc, section.label, section.accent, y);
 
@@ -246,7 +251,7 @@ function drawAggregationBlock(
       if (hasQ1Q3)  row.push(fmtWithUnit(q1![i], unit), fmtWithUnit(q3![i], unit));
       if (hasMinMax) row.push(fmtWithUnit(min_values![i], unit), fmtWithUnit(max_values![i], unit));
       if (hasCount)  row.push(String(participant_count![i] ?? "-"));
-      row.push(delta(my, cat));
+      row.push(delta(my, cat, invert));
       return row;
     });
 
@@ -315,7 +320,7 @@ function drawAggregationBlock(
           const rowIdx = data.row.index;
           const my  = my_data[rowIdx]  ?? null;
           const cat = category_data[rowIdx] ?? null;
-          const [r, g, b] = deltaColor(my, cat);
+          const [r, g, b] = deltaColor(my, cat, invert);
           data.cell.styles.textColor = [r, g, b];
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.halign = "right";

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction, useState } from "react";
 import { FacilityDetailFormData } from "@/lib/validators/facility";
 import { isV2Eligible } from "@/lib/facility-v2";
 import Link from "next/link";
@@ -24,6 +24,7 @@ import {
   faHotel,
   faToggleOn,
   faToggleOff,
+  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 type FieldConfig = {
@@ -91,25 +92,44 @@ function Panel({
   title,
   subtitle,
   children,
+  defaultOpen = true,
 }: {
   icon: any;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-brand-50 to-white">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className={`w-full flex items-center gap-3 px-6 py-4 text-left bg-gradient-to-r from-brand-50 to-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-inset transition-colors ${open ? 'border-b border-slate-200' : ''}`}
+      >
         <div className="w-9 h-9 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0">
           <FontAwesomeIcon icon={icon} className="w-4 h-4 text-brand-600" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-slate-800">{title}</h3>
           {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
         </div>
-      </div>
-      <div className="p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">{children}</div>
+        <div
+          className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : 'rotate-0'}`}
+        >
+          <FontAwesomeIcon icon={faChevronDown} className="w-3.5 h-3.5 text-slate-500" />
+        </div>
+      </button>
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">{children}</div>
+          </div>
+        </div>
       </div>
     </div>
   );
