@@ -55,27 +55,31 @@ function normaliseLabelEntry(entry: unknown): LabelEntry {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Round half-up to 2 decimals (Math.round rounds .5 toward +∞; apply on magnitude). */
+function round2HalfUp(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value) * 100 + 1e-9) / 100;
+}
+
 function fmtNum(value: number | undefined | null): number | string {
-  if (value === null) return "nicht berechenbar";
-  if (value === undefined || isNaN(value as number)) return "—";
-  return value as number;
+  if (value === null || value === undefined || isNaN(value as number)) return "-";
+  return round2HalfUp(value as number);
 }
 
 /**
  * Returns a string with unit appended when a unit is provided,
- * otherwise returns the raw number (for native Excel formatting).
+ * otherwise returns the raw (rounded) number for native Excel formatting.
  */
 function fmtWithUnit(value: number | undefined | null, unit?: string): number | string {
   const base = fmtNum(value);
-  if (unit && base !== "—") return `${base} ${unit}`;
+  if (unit && typeof base === "number") return `${base} ${unit}`;
   return base;
 }
 
 function deltaText(my: number | null, cat: number | null): string {
-  if (my === null || cat === null || cat === 0) return "—";
+  if (my === null || cat === null || cat === 0) return "-";
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return "≈ Parity";
-  return (pct > 0 ? "▲ " : "▼ ") + Math.abs(pct).toFixed(1) + "%";
+  return (pct > 0 ? "▲ " : "▼ ") + round2HalfUp(Math.abs(pct)) + "%";
 }
 
 function deltaFill(my: number | null, cat: number | null): string {
@@ -126,7 +130,7 @@ function cellStyle(
       left:   { style: "thin", color: { argb: C.border } },
       right:  { style: "thin", color: { argb: C.border } },
     },
-    numFmt: "#,##0.###",
+    numFmt: "#,##0.##",
   };
 }
 
@@ -403,7 +407,7 @@ function addKpiSheet(
 
       if (hasCount) {
         const countCell = ws.getCell(currentRow, col++);
-        countCell.value = participant_count![i] ?? "—";
+        countCell.value = participant_count![i] ?? "-";
         countCell.style = {
           ...cellStyle(rowFill, C.grey, false, "center"),
           alignment: { vertical: "top", horizontal: "center" },
@@ -442,7 +446,7 @@ function addKpiSheet(
           };
         }
       } else {
-        statusCell.value = "—";
+        statusCell.value = "-";
         statusCell.style = {
           ...cellStyle(rowFill, C.grey, false, "center"),
           alignment: { vertical: "top", horizontal: "center" },

@@ -30,8 +30,22 @@ import {
   faWrench,
   faMinus,
   faChevronDown,
+  faMoneyBillTrendUp,
+  faClock,
+  faRepeat,
+  faPeopleGroup,
 } from '@fortawesome/free-solid-svg-icons';
 import { FacilityDetail } from "@/lib/types/facilities";
+import { isV2Eligible } from "@/lib/facility-v2";
+
+// V2 / Netzwerk-2 per-area personnel block (cat.1 + cat.2 only).
+const PERSONNEL_AREAS: { hours: keyof FacilityDetail; wage: keyof FacilityDetail; label: string }[] = [
+  { hours: "pers_admin_hours", wage: "pers_admin_wage", label: "Verwaltung" },
+  { hours: "pers_kitchen_hours", wage: "pers_kitchen_wage", label: "Hauswirtschaft-Küche" },
+  { hours: "pers_cleaning_hours", wage: "pers_cleaning_wage", label: "Hauswirtschaft-Reinigung" },
+  { hours: "pers_tech_hours", wage: "pers_tech_wage", label: "Technik" },
+  { hours: "pers_edu_hours", wage: "pers_edu_wage", label: "Pädagogik" },
+];
 
 function safeInt(value?: string): number {
   const n = parseInt(value ?? '');
@@ -451,6 +465,90 @@ export default function FacilityDetailTable({ id }: { id: string }) {
                             formatter={formatCurrency} inverse
                           />
                         </Section>
+
+                        {isV2Eligible(facility?.category_name) && (
+                          <>
+                            <Section title="Gruppen & Veranstaltungen">
+                              <StatCard
+                                icon={faUsers} iconBg="bg-brand-100" iconColor="text-brand-600"
+                                cardBg="bg-brand-50/50" borderColor="border-brand-100"
+                                label="Anzahl Gruppen / Seminare" labelColor="text-brand-700"
+                                value={detail.total_groups ?? ""}
+                                trend={calculateTrend(detail.total_groups ?? "", prev?.total_groups)}
+                              />
+                              <StatCard
+                                icon={faPeopleGroup} iconBg="bg-indigo-100" iconColor="text-indigo-600"
+                                cardBg="bg-indigo-50/50" borderColor="border-indigo-100"
+                                label="Eigene Gruppen / Seminare" labelColor="text-indigo-700"
+                                value={detail.own_groups ?? ""}
+                                trend={calculateTrend(detail.own_groups ?? "", prev?.own_groups)}
+                              />
+                              <StatCard
+                                icon={faUsers} iconBg="bg-violet-100" iconColor="text-violet-600"
+                                cardBg="bg-violet-50/50" borderColor="border-violet-100"
+                                label="Eigene Teilnehmer" labelColor="text-violet-700"
+                                value={detail.own_participants ?? ""}
+                                trend={calculateTrend(detail.own_participants ?? "", prev?.own_participants)}
+                              />
+                              <StatCard
+                                icon={faRepeat} iconBg="bg-sky-100" iconColor="text-sky-600"
+                                cardBg="bg-sky-50/50" borderColor="border-sky-100"
+                                label="Stammgruppen" labelColor="text-sky-700"
+                                value={detail.returning_groups ?? ""}
+                                trend={calculateTrend(detail.returning_groups ?? "", prev?.returning_groups)}
+                              />
+                            </Section>
+
+                            <Section title="Weitere Kosten">
+                              <StatCard
+                                icon={faWrench} iconBg="bg-amber-100" iconColor="text-amber-600"
+                                cardBg="bg-amber-50/50" borderColor="border-amber-100"
+                                label="Reparatur / Instandhaltung" labelColor="text-amber-700"
+                                value={detail.repair_maintenance_costs ?? ""}
+                                trend={calculateTrend(detail.repair_maintenance_costs ?? "", prev?.repair_maintenance_costs)}
+                                formatter={formatCurrency} inverse
+                              />
+                              <StatCard
+                                icon={faMoneyBillTrendUp} iconBg="bg-rose-100" iconColor="text-rose-600"
+                                cardBg="bg-rose-50/50" borderColor="border-rose-100"
+                                label="Abschreibungen" labelColor="text-rose-700"
+                                value={detail.depreciation_costs ?? ""}
+                                trend={calculateTrend(detail.depreciation_costs ?? "", prev?.depreciation_costs)}
+                                formatter={formatCurrency} inverse
+                              />
+                              <StatCard
+                                icon={faHotel} iconBg="bg-teal-100" iconColor="text-teal-600"
+                                cardBg="bg-teal-50/50" borderColor="border-teal-100"
+                                label="Pacht / Miete" labelColor="text-teal-700"
+                                value={detail.rent_lease_costs ?? ""}
+                                trend={calculateTrend(detail.rent_lease_costs ?? "", prev?.rent_lease_costs)}
+                                formatter={formatCurrency} inverse
+                              />
+                            </Section>
+
+                            <Section title="Personalkosten je Bereich">
+                              {PERSONNEL_AREAS.flatMap(area => [
+                                <StatCard
+                                  key={`${area.hours}`}
+                                  icon={faClock} iconBg="bg-cyan-100" iconColor="text-cyan-600"
+                                  cardBg="bg-cyan-50/50" borderColor="border-cyan-100"
+                                  label={`${area.label} – Stunden`} labelColor="text-cyan-700"
+                                  value={(detail[area.hours] as string | undefined) ?? ""}
+                                  trend={calculateTrend((detail[area.hours] as string | undefined) ?? "", prev?.[area.hours] as string | undefined)}
+                                />,
+                                <StatCard
+                                  key={`${area.wage}`}
+                                  icon={faUserTie} iconBg="bg-rose-100" iconColor="text-rose-600"
+                                  cardBg="bg-rose-50/50" borderColor="border-rose-100"
+                                  label={`${area.label} – Lohn`} labelColor="text-rose-700"
+                                  value={(detail[area.wage] as string | undefined) ?? ""}
+                                  trend={calculateTrend((detail[area.wage] as string | undefined) ?? "", prev?.[area.wage] as string | undefined)}
+                                  formatter={formatCurrency} inverse
+                                />,
+                              ])}
+                            </Section>
+                          </>
+                        )}
                       </div>
                     </CollapsePanel>
                   </div>

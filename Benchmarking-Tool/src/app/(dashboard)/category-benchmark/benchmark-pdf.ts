@@ -52,14 +52,17 @@ const KPI_SECTIONS: {
   { key: "personnel_area_kpis",    label: "Personalkosten je Bereich",         accent: [16, 185, 129] },
 ];
 
+/** Round half-up to 2 decimals (Math.round rounds .5 toward +∞; apply on magnitude). */
+function round2HalfUp(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value) * 100 + 1e-9) / 100;
+}
+
 function fmt(value: number | undefined | null): string {
-  if (value === null) return "nicht berechenbar";
-  if (value === undefined || isNaN(value as number)) return "—";
+  if (value === null || value === undefined || isNaN(value as number)) return "-";
   const v = value as number;
-  if (Math.abs(v) >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
-  if (Math.abs(v) >= 1_000) return (v / 1_000).toFixed(2) + "k";
-  if (!Number.isInteger(v) && v !== 0) return v.toFixed(2);
-  return v.toLocaleString("de-DE");
+  if (Math.abs(v) >= 1_000_000) return round2HalfUp(v / 1_000_000) + "M";
+  if (Math.abs(v) >= 1_000) return round2HalfUp(v / 1_000) + "k";
+  return round2HalfUp(v).toLocaleString("de-DE");
 }
 
 function fmtWithUnit(value: number | undefined | null, unit?: string): string {
@@ -68,10 +71,10 @@ function fmtWithUnit(value: number | undefined | null, unit?: string): string {
 }
 
 function delta(my: number | null, cat: number | null): string {
-  if (my === null || cat === null || cat === 0) return "—";
+  if (my === null || cat === null || cat === 0) return "-";
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return "~ Gleichstand";
-  return (pct > 0 ? "+ " : "- ") + Math.abs(pct).toFixed(2) + "%";
+  return (pct > 0 ? "+ " : "- ") + round2HalfUp(Math.abs(pct)) + "%";
 }
 
 function deltaColor(my: number | null, cat: number | null): [number, number, number] {
@@ -242,7 +245,7 @@ function drawAggregationBlock(
       const row: string[] = [entry.label, fmtWithUnit(my, unit), fmtWithUnit(cat, unit)];
       if (hasQ1Q3)  row.push(fmtWithUnit(q1![i], unit), fmtWithUnit(q3![i], unit));
       if (hasMinMax) row.push(fmtWithUnit(min_values![i], unit), fmtWithUnit(max_values![i], unit));
-      if (hasCount)  row.push(String(participant_count![i] ?? "—"));
+      if (hasCount)  row.push(String(participant_count![i] ?? "-"));
       row.push(delta(my, cat));
       return row;
     });

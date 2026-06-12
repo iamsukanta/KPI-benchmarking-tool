@@ -1,3 +1,4 @@
+from decimal import Decimal, ROUND_HALF_UP
 from statistics import median
 from abc import ABC, abstractmethod
 from typing import Any
@@ -8,6 +9,15 @@ from django.db.models.functions import Coalesce, Round
 
 from .models import Facility, FacilityDetail
 from .constants import is_v2_eligible
+
+
+def round_half_up(value: float | int | None, places: int = 2) -> float | None:
+    """Round half-up to ``places`` decimals (Python's built-in round() is banker's
+    rounding). Returns None unchanged so NULL KPIs stay NULL."""
+    if value is None:
+        return None
+    quantum = Decimal(1).scaleb(-places)  # e.g. Decimal('0.01')
+    return float(Decimal(str(value)).quantize(quantum, rounding=ROUND_HALF_UP))
 
 
 # Minimum number of facilities with a non-NULL value required before a NEW (V2)
@@ -65,7 +75,7 @@ def compute_v2_kpis(row: dict) -> dict[str, float | None]:
     def ratio(cost):
         if not op_rev or cost is None:
             return None
-        return round(float(cost) / float(op_rev) * 100, 2)
+        return round_half_up(float(cost) / float(op_rev) * 100)
 
     result['depreciation_ratio'] = ratio(row['depreciation_costs'])
     result['repair_maintenance_ratio'] = ratio(row['repair_maintenance_costs'])
@@ -78,7 +88,7 @@ def compute_v2_kpis(row: dict) -> dict[str, float | None]:
     def share(numerator, denominator):
         if not denominator or numerator is None:
             return None
-        return round(numerator / denominator * 100, 2)
+        return round_half_up(numerator / denominator * 100)
 
     result['own_groups_share'] = share(row['own_groups'], total_groups)
     result['own_participants_share'] = share(row['own_participants'], overnight_stays)
@@ -91,10 +101,10 @@ def compute_v2_kpis(row: dict) -> dict[str, float | None]:
         hours = row[f'pers_{area}_hours']
         wage = row[f'pers_{area}_wage']
         result[f'pers_{area}_cost_per_hour'] = (
-            round(float(wage) / hours, 2) if hours and wage is not None else None
+            round_half_up(float(wage) / hours) if hours and wage is not None else None
         )
         result[f'pers_{area}_cost_share'] = (
-            round(float(wage) / float(pers_denominator) * 100, 2)
+            round_half_up(float(wage) / float(pers_denominator) * 100)
             if pers_denominator and wage is not None else None
         )
 
@@ -144,20 +154,20 @@ class AbstractBenchmark(ABC):
             )
             .annotate(
                 occupancy_rate=Round(
-                    (F('overnight_stays') / (F('facility__beds') * F('facility__opening_days_per_year'))) * 100,
+                    (F('overnight_stays') * 1.0 / (F('facility__beds') * F('facility__opening_days_per_year'))) * 100,
                     2
                 ),
                 overnight_stays_per_year_per_bed=Round(
-                    F('overnight_stays') / F('facility__beds'),
+                    F('overnight_stays') * 1.0 / F('facility__beds'),
                     2
                 ),
                 overnight_stays_per_opening_day=Round(
-                    F('overnight_stays') / F('facility__opening_days_per_year'),
+                    F('overnight_stays') * 1.0 / F('facility__opening_days_per_year'),
                     2
                 ),
                 average_length_of_stay=Round(
                     Coalesce(
-                        F('overnight_stays') / F('guests'),
+                        F('overnight_stays') * 1.0 / F('guests'),
                         0,
                         output_field=FloatField()
                     ),
@@ -212,7 +222,7 @@ class AbstractBenchmark(ABC):
                     2
                 ),
                 room_occupancy_rate=Round(
-                    (F('rooms_sold') / (F('facility__rooms') * F('facility__opening_days_per_year'))) * 100,
+                    (F('rooms_sold') * 1.0 / (F('facility__rooms') * F('facility__opening_days_per_year'))) * 100,
                     2
                 ),
                 cleaning_cost_per_room=Round(
@@ -573,7 +583,7 @@ class CategoryWideBenchmark(AbstractBenchmark):
     def my_data(self) -> dict[str, list]:
         row = self.my_annual_stats
         return {
-            group: [(row[key] if row else None) for key in keys]
+            group: [round_half_up(row[key]) if row else None for key in keys]
             for group, keys in self._groups.items()
         }
 
@@ -585,10 +595,10 @@ class CategoryWideBenchmark(AbstractBenchmark):
                 if key in V2_ALL_KPI_KEYS:
                     # New KPIs: NULL-safe + per-KPI min-5 suppression (FR-04).
                     clean = [item[key] for item in data if item.get(key) is not None]
-                    values.append(round(func(clean), 2) if len(clean) >= MIN_PARTICIPANTS else None)
+                    values.append(round_half_up(func(clean)) if len(clean) >= MIN_PARTICIPANTS else None)
                 else:
-                    # Existing KPIs: unchanged aggregation to preserve AC-09.
-                    values.append(func([item[key] for item in data]))
+                    # Existing KPIs: aggregate then round half-up to 2 decimals.
+                    values.append(round_half_up(func([item[key] for item in data])))
             result[group] = values
         return result
 

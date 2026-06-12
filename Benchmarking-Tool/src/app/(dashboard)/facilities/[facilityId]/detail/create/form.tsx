@@ -2,6 +2,7 @@
 
 import React, { Dispatch, SetStateAction } from "react";
 import { FacilityDetailFormData } from "@/lib/validators/facility";
+import { isV2Eligible } from "@/lib/facility-v2";
 import Link from "next/link";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -32,16 +33,6 @@ type FieldConfig = {
   icon: any;
   optional?: boolean;
 };
-
-// Categories that receive the V2 / Netzwerk-2 fields (Cat.1 Hotels + Cat.2 Tagungshaus).
-const V2_ELIGIBLE_CATEGORY_NAMES = [
-  "Hotels / Tagungshotels",
-  "Tagungshaus / Familienferienstatte",
-];
-
-function isV2Eligible(categoryName?: string): boolean {
-  return !!categoryName && V2_ELIGIBLE_CATEGORY_NAMES.includes(categoryName);
-}
 
 const coreFields: FieldConfig[] = [
   { name: "year", label: "Jahr", placeholder: "e.g. " + new Date().getFullYear(), icon: faCalendarWeek },
@@ -95,11 +86,31 @@ const incomeFields: FieldConfig[] = [
   { name: "accommodation_income", label: "Einkünfte aus Beherbergung", placeholder: "Optional", icon: faHotel, optional: true },
 ];
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+function Panel({
+  icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: any;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="pb-3 border-b border-slate-200 mb-5">
-      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{title}</h3>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-brand-50 to-white">
+        <div className="w-9 h-9 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0">
+          <FontAwesomeIcon icon={icon} className="w-4 h-4 text-brand-600" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">{children}</div>
+      </div>
     </div>
   );
 }
@@ -195,72 +206,52 @@ export default function FacilityDetailCreateForm({
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <form onSubmit={onSubmitAction} noValidate className="p-6 space-y-8">
+      <form onSubmit={onSubmitAction} noValidate className="space-y-6">
 
-          <section>
-            <SectionHeader title="Core Metrics" subtitle="Key operational figures for the year" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {coreFields.map(renderField)}
+        <Panel icon={faBed} title="Core Metrics" subtitle="Key operational figures for the year">
+          {coreFields.map(renderField)}
+        </Panel>
+
+        <Panel icon={faHandHoldingHeart} title="Additional Income Sources" subtitle="Optional — fill in if applicable">
+          {incomeFields.map(renderField)}
+        </Panel>
+
+        <Panel icon={faMoneyBillTrendUp} title="Operating Costs" subtitle="Annual expenditure breakdown">
+          {costFields.map(renderField)}
+        </Panel>
+
+        {showV2Fields && (
+          <>
+            <Panel icon={faUserTie} title="Personalkosten je Bereich" subtitle="Optional — Jahresstunden und Lohnkosten je Bereich">
+              {personnelFields.map(renderField)}
+            </Panel>
+
+            <Panel icon={faWrench} title="Weitere Kosten" subtitle="Optional — nur für Hotels und Tagungshäuser">
+              {v2CostFields.map(renderField)}
+            </Panel>
+
+            <Panel icon={faUsers} title="Gruppen & Veranstaltungen" subtitle="Optional — nur für Hotels und Tagungshäuser">
+              {groupEventFields.map(renderField)}
+            </Panel>
+          </>
+        )}
+
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-6">
+          <div
+            className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
+            onClick={handleToggle}
+          >
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Veröffentlichen Sie diesen Datensatz</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {form.is_published ? "Diese jährlichen Daten werden für andere sichtbar sein." : "Diese Jahresdaten bleiben als Entwurf bestehen."}
+              </p>
             </div>
-          </section>
-
-          <section>
-            <SectionHeader title="Operating Costs" subtitle="Annual expenditure breakdown" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {costFields.map(renderField)}
-            </div>
-          </section>
-
-          <section>
-            <SectionHeader title="Additional Income Sources" subtitle="Optional — fill in if applicable" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {incomeFields.map(renderField)}
-            </div>
-          </section>
-
-          {showV2Fields && (
-            <>
-              <section>
-                <SectionHeader title="Weitere Kosten" subtitle="Optional — nur für Hotels und Tagungshäuser" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {v2CostFields.map(renderField)}
-                </div>
-              </section>
-
-              <section>
-                <SectionHeader title="Gruppen & Veranstaltungen" subtitle="Optional — nur für Hotels und Tagungshäuser" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {groupEventFields.map(renderField)}
-                </div>
-              </section>
-
-              <section>
-                <SectionHeader title="Personalkosten je Bereich" subtitle="Optional — Jahresstunden und Lohnkosten je Bereich" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {personnelFields.map(renderField)}
-                </div>
-              </section>
-            </>
-          )}
-
-          <section className="pt-2">
-            <div
-              className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
-              onClick={handleToggle}
-            >
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Veröffentlichen Sie diesen Datensatz</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {form.is_published ? "Diese jährlichen Daten werden für andere sichtbar sein." : "Diese Jahresdaten bleiben als Entwurf bestehen."}
-                </p>
-              </div>
-              <FontAwesomeIcon
-                icon={form.is_published ? faToggleOn : faToggleOff}
-                className={`w-8 h-8 transition-colors ${form.is_published ? 'text-brand-600' : 'text-slate-400'}`}
-              />
-            </div>
-          </section>
+            <FontAwesomeIcon
+              icon={form.is_published ? faToggleOn : faToggleOff}
+              className={`w-8 h-8 transition-colors ${form.is_published ? 'text-brand-600' : 'text-slate-400'}`}
+            />
+          </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
             <Link
@@ -291,8 +282,8 @@ export default function FacilityDetailCreateForm({
               )}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </>
   );
 }

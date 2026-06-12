@@ -147,11 +147,15 @@ const KPI_SECTIONS: {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Round half-up to 2 decimals (Math.round rounds .5 toward +∞; apply on magnitude). */
+function round2HalfUp(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value) * 100 + 1e-9) / 100;
+}
+
 function formatValue(value: number): string {
-  if (Math.abs(value) >= 1_000_000) return (value / 1_000_000).toFixed(2) + "M";
-  if (Math.abs(value) >= 1_000) return (value / 1_000).toFixed(2) + "k";
-  if (!Number.isInteger(value) && value !== 0) return value.toFixed(2);
-  return value.toLocaleString();
+  if (Math.abs(value) >= 1_000_000) return round2HalfUp(value / 1_000_000) + "M";
+  if (Math.abs(value) >= 1_000) return round2HalfUp(value / 1_000) + "k";
+  return round2HalfUp(value).toLocaleString();
 }
 
 function formatWithUnit(value: number, unit?: string): string {
@@ -159,9 +163,9 @@ function formatWithUnit(value: number, unit?: string): string {
   return unit ? `${base} ${unit}` : base;
 }
 
-/** Render a KPI value, showing "nicht berechenbar" for NULL (R001). */
+/** Render a KPI value, showing "-" for missing/NULL values. */
 function formatCellValue(value: number | null | undefined, unit?: string): string {
-  if (value === null || value === undefined) return "nicht berechenbar";
+  if (value === null || value === undefined) return "-";
   return formatWithUnit(value, unit);
 }
 
@@ -211,7 +215,7 @@ function DeltaBadge({
   reverse?: boolean;
 }) {
   if (my === null || cat === null || cat === 0)
-    return <span className="text-xs text-slate-400">—</span>;
+    return <span className="text-xs text-slate-400">-</span>;
   const pct = ((my - cat) / cat) * 100;
   const neutral = Math.abs(pct) < 0.5;
   if (neutral)
@@ -231,7 +235,7 @@ function DeltaBadge({
         }`}
       >
         <FontAwesomeIcon icon={up ? faArrowUp : faArrowDown} className="w-2.5 h-2.5" />
-        {Math.abs(pct).toFixed(1)}%
+        {round2HalfUp(Math.abs(pct))}%
       </span>
     );
   }
@@ -243,7 +247,7 @@ function DeltaBadge({
       }`}
     >
       <FontAwesomeIcon icon={up ? faArrowUp : faArrowDown} className="w-2.5 h-2.5" />
-      {Math.abs(pct).toFixed(1)}%
+      {round2HalfUp(Math.abs(pct))}%
     </span>
   );
 }
