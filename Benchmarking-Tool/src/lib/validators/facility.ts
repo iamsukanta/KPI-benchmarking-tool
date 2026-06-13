@@ -3,7 +3,7 @@ import { z } from "zod";
 export const facilitySchema = z.object({
   category: z.string().min(1, "Wählen Sie eine Kategorie aus."),
   name: z.string().min(1, "Der Name der Einrichtung ist erforderlich."),
-  federal_state: z.boolean().optional(),
+  region: z.string().min(1, "Region (Bundesland) ist erforderlich."),
   beds: z.string().optional(),
   rooms: z.string().optional(),
   opening_days_per_year: z.string().min(1, "Es werden Öffnungstage pro Jahr benötigt."),

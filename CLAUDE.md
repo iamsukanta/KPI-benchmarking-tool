@@ -17,8 +17,9 @@ Both services run in Docker on an external `volulink` Docker network.
 ```
 Browser
   └─► Next.js (port 3000)
-        ├─ /api/auth/*         ← sets/clears httpOnly JWT cookies
-        └─ /api/proxy/[...path] ← forwards requests to Django with Authorization header
+        ├─ login server action    ← calls Django, sets JWT cookies
+        ├─ /api/auth/{logout,refresh} ← clears / rotates cookies
+        └─ /api/proxy/[...path]    ← forwards requests to Django with Authorization header
               └─► Django DRF (port 8000)
                     ├─ /api/v1/auth/
                     ├─ /api/v1/         (facilities, categories, benchmarks)
@@ -26,11 +27,11 @@ Browser
 ```
 
 **Authentication flow:**
-1. Login → Next.js API route calls Django, receives JWT tokens
-2. Tokens stored as httpOnly cookies (`access`, `refresh`, `user`)
-3. All authenticated requests go through `/api/proxy/...` which injects `Authorization: Bearer <token>`
-4. Token expiry → `/api/auth/refresh/` rotates the pair
-5. Logout → Django blacklists the refresh token
+1. Login → the `(auth)/login/actions.ts` **server action** posts to `/api/v1/auth/login/`, receives JWT tokens (it does *not* go through `/api/proxy`)
+2. Tokens stored as cookies: `access` and `refresh` are **httpOnly**; `user` is a non-httpOnly JSON cookie so `auth-context` / `getServerUser()` can read the role client- and server-side
+3. All authenticated requests go through `/api/proxy/[...path]` which injects `Authorization: Bearer <access>` (except `PUBLIC_PATHS`: login, signup, token-refresh, invitations, unapproved-* — sent without auth). The proxy also forwards `multipart/form-data` for uploads
+4. Token expiry → `/api/auth/refresh/` calls Django `/api/v1/auth/token-refresh/` to rotate the pair
+5. Logout → `/api/auth/logout/` clears cookies; Django blacklists the refresh token
 
 ---
 
@@ -47,8 +48,10 @@ Browser
 | Zod | 4.3.5 | Client-side validation |
 | Chart.js + react-chartjs-2 | 4.5.1 / 5.3.1 | Data visualization |
 | ExcelJS | 4.1.1 | Excel export |
-| jsPDF + jspdf-autotable | 4.2.0 | PDF generation |
-| FontAwesome | 3.1.1 | Icons |
+| jsPDF + jspdf-autotable | 4.2.0 / 5.0.7 | PDF generation |
+| FontAwesome | react-fontawesome 3.1.1 + free-*-svg-icons 7.1.0 | Icons |
+
+> Notes: there is **no test framework or runner** configured (`npm` scripts are `dev`/`build`/`start`/`lint` only). `package.json` pins transitive overrides for `minimatch`/`glob`/`rimraf`.
 
 ### Backend
 | Dependency | Version | Purpose |
@@ -71,21 +74,33 @@ Browser
 
 ```
 app/
-  (auth)/                   # Public auth pages (login, signup, forgot-password, invitations)
-    _components/            # Auth-specific components
+  (auth)/                   # Public auth pages
+    login/                  # page.tsx + actions.ts (login server action)
+    signup/                 # page.tsx + actions.ts
+    forgot-password/        # request OTP
+    reset-password/         # submit OTP + new password
+    invitations/[token]/    # accept-invitation flow (page + form + actions)
+    _components/            # loginForm, signup-form, no-auth
   (dashboard)/              # Protected routes (wrapped by layout.tsx with sidebar)
-    _components/            # Dashboard-shared components
-    categories/
-    facilities/
+    page.tsx                # entry — renders main.tsx → role dashboard
+    main.tsx, sidebar.tsx, dashboard.tsx
+    admin-dashboard.tsx
+    facility-manager-dashboard.tsx
+    federation-manager-dashboard.tsx
+    _components/            # dashboard-shared components
+      dashboard/            # benchmark-attempts, facilities, user-activities,
+                            #   user-approvals, user-join-requests
+    categories/             # list + create + [categoryId]/(detail|update), _components/
+    facilities/             # list + create + [facilityId]/... + detail/[detailId], _components/
     internal-benchmark/
     category-benchmark/
+    master-data/            # admin Excel master-data upload (page + upload form)
     profile/
     user-invitations/
     joining-requests/
-    [role]-dashboard.tsx    # admin-dashboard, facility-manager-dashboard, federation-manager-dashboard
+    [...catchAll]/          # catch-all 404 (page.tsx + not-found.tsx)
   api/
-    auth/login/route.ts
-    auth/logout/route.ts
+    auth/logout/route.ts    # NOTE: login is a server action, not an API route
     auth/refresh/route.ts
     proxy/[...path]/route.ts  # Catch-all proxy to Django
   styles/
@@ -94,24 +109,31 @@ app/
     _style.scss             # Global styles
     globals.scss            # @use entry point
 
-components/                 # Truly shared UI components
+components/                 # Truly shared helpers/UI
+  benchmark-chart.ts        # Chart.js dataset/config builders
+  notify.ts                 # toast / notification helper
+  public.ts, require-auth.ts # route guards
+  searchable-select.tsx     # reusable select component
 context/
   auth-context.tsx          # useAuth() hook — reads user cookie, manages hydration
 lib/
   api/
     index.ts                # serverFetch() utility (server-side, attaches auth header)
-    auth.ts                 # login, signup, profile, password-change API calls
+    auth.ts                 # signup, profile, password-change API calls
     categories.ts
     facilities.ts
     facilities-server.ts    # Server-component fetch variants
     dashboard.ts
     user-invitations.ts
+  auth/
+    server.ts               # getServerUser() — reads user cookie in server components
   types/
-    auth.ts                 # User, AuthUser, DashboardResult
+    auth.ts                 # User, AuthUser, AuthResponse, DashboardResult
     facilities.ts
     benchmark.ts
     user-invitations.ts
     response.ts             # ApiMessageResponse
+    index.ts                # barrel re-exports
   validators/               # Zod schemas (loginSchema, signupSchema, etc.)
     auth.ts
     category.ts
@@ -173,27 +195,44 @@ Each app follows this layout:
 ### URL Prefixes
 | Prefix | App |
 |---|---|
-| `/api/v1/auth/` | authentication |
+| `/api/v1/auth/` | authentication (login, token-refresh, signup, logout, email-verification, reset-password, me, user-invitations) |
 | `/api/v1/categories/` | facilities |
 | `/api/v1/facilities/` | facilities |
 | `/api/v1/federations/` | facilities |
+| `/api/v1/unapproved-facilities/` `/api/v1/unapproved-federations/` | facilities (admin approval queues) |
 | `/api/v1/internal-benchmark/` | facilities |
 | `/api/v1/category-wide-benchmark/` | facilities |
-| `/api/v1/facility-master-data/` | facilities |
+| `/api/v1/facility-master-data/` | facilities (`MasterDataApi` — Excel import) |
 | `/api/v1/dashboard/` | dashboard |
+
+Login is `POST /api/v1/auth/login/` (a `TokenObtainPairView` subclass); refresh is `POST /api/v1/auth/token-refresh/` (SimpleJWT `TokenRefreshView`). Both are registered outside the DRF router in `authentication/urls.py`.
 
 ### Key Models
 
 **authentication.User** (custom AUTH_USER_MODEL)
-- `email` (unique, login field)
-- `role` — `admin` | `federation_manager` | `facility_manager`
-- `is_email_verified`, `is_active`, `password_changed_at`
+- `email` (unique, login field), `first_name`, `last_name` (no single `name` field)
+- `role` — `admin` | `federation_manager` | `facility_manager` (`ROLE_*` constants; display labels are German, e.g. `Verbandsmanager`)
+- `is_email_verified`, `email_verified_at`, `is_active`, `is_staff`
+- `change_password_at_first_login`, `password_changed_at`, `last_verification_email_sent_at`
+
+**authentication** also has: `Otp` (one-time codes for password reset, with `request_type`), `EmailVerificationToken` (token-based email verification — distinct from OTP), `UserInvitation` (tokenized invites with expiry), `UserActivityLog`.
 
 **facilities.Facility**
-- `is_federation` — True for federation parent nodes
-- `federation` (FK → self) — member facilities point to their federation
-- `is_user_approved` — admin approval gate
-- Yearly data stored in `FacilityDetail` (separate model, FK to Facility + year)
+- `user` (FK → User), `category` (FK → Category)
+- `is_federation` — True for federation parent nodes; `federation` (FK → self) — member facilities point to their federation
+- `is_user_approved` — admin approval gate; `is_active`
+- Structural attributes: `beds`, `rooms`, `opening_days_per_year`, `operational_building_area`, `total_property_area`, `federal_state`
+
+**facilities.FacilityDetail** — one row per `(facility, year)`, holds all yearly benchmark inputs:
+- Volume: `guests`, `rooms_sold`, `overnight_stays`
+- Income: `total_revenue`, `catering_income`, `accommodation_income`, `donations_subsidies_income`, `other_income`
+- Costs: `personnel_costs`, `material_goods_costs`, `energy_costs`, `outsourced_services_costs`, `other_operating_costs`, `repair_maintenance_costs`, `depreciation_costs`, `rent_lease_costs`
+- Groups/seminars: `total_groups`, `own_groups`, `own_participants`, `returning_groups`
+- Per-department personnel hours + wage pairs: `pers_{admin,kitchen,cleaning,tech,edu}_{hours,wage}`
+- `total_costs` (computed, `editable=False`), `is_published`, `last_published_at`
+- `FacilityActivityLog` tracks mutations.
+
+See `Calculation_Rules.md` and `sample_reports.md` (repo root) for the benchmark KPI formulas and report layouts derived from these fields.
 
 **volulink.Model** (abstract base)
 - Adds `created_at`, `updated_at` to every model
@@ -318,6 +357,8 @@ Backend runs: `gunicorn -w 4 -k uvicorn.workers.UvicornWorker core.asgi:applicat
 - **Proxy pattern**: Frontend never calls Django directly from the browser; all requests go through `/api/proxy/[...path]`
 - **Server actions**: Prefer Next.js server actions over client-side fetch for form submissions
 - **Audit logs**: `UserActivityLog` and `FacilityActivityLog` track key mutations
-- **Soft approval**: New users/facilities are inactive until admin approves (`is_user_approved`)
-- **OTP reset**: Password reset uses a time-limited OTP sent via email, not a link
+- **Soft approval**: New users/facilities are inactive until admin approves (`is_user_approved`); admins work the queues via the `unapproved-facilities` / `unapproved-federations` endpoints
+- **OTP reset**: Password reset uses a time-limited OTP (`Otp`) sent via email, not a link
+- **Email verification**: Uses a tokenized link (`EmailVerificationToken`) — separate mechanism from the password-reset OTP
+- **Publishing**: A `FacilityDetail` is a draft until `is_published` is set (`last_published_at` recorded); benchmarks compare published years
 - **No comments by default**: Code should be self-documenting; only add comments for non-obvious WHY

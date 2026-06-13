@@ -17,6 +17,7 @@ import {
   CategoryWideBenchmarkEligibleFacility,
 } from "@/lib/types/benchmark";
 import Benchmark from "@/app/(dashboard)/category-benchmark/benchmark";
+import SearchableSelect from "@/components/searchable-select";
 
 type BenchmarkResult =
   | { ok: true; data: CategoryWideBenchmarkResponse }
@@ -251,24 +252,20 @@ export default function BenchmarkClient({
                 Für diese Einrichtung sind keine Jahre verfügbar.
               </p>
             ) : (
-              <select
-                value={year}
-                onChange={(e) => {
-                  setYear(e.target.value);
-                  setResult(null);
-                }}
-                className="w-full max-w-xs px-4 py-3 rounded-lg bg-white border border-slate-300
-                  text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500
-                  focus:border-brand-500 transition-colors text-sm"
-              >
-                {[...selectedFacility.years]
-                  .sort((a, b) => b - a)
-                  .map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-              </select>
+              <div className="max-w-xs">
+                <SearchableSelect
+                  name="year"
+                  value={year}
+                  placeholder="Jahr auswählen…"
+                  options={[...selectedFacility.years]
+                    .sort((a, b) => b - a)
+                    .map((y) => ({ label: String(y), value: String(y) }))}
+                  onChange={(_name, value) => {
+                    setYear(value);
+                    setResult(null);
+                  }}
+                />
+              </div>
             )}
           </div>
         </div>

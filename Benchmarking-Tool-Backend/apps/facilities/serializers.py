@@ -57,6 +57,7 @@ class FacilitySerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     federation_name = serializers.CharField(source='federation.name', allow_null=True, read_only=True)
     user_name = serializers.SerializerMethodField(allow_null=True)
+    user_email = serializers.CharField(source='user.email', allow_null=True, read_only=True)
     user_facility_role = serializers.CharField(source='user.role', allow_null=True, read_only=True)
 
     @staticmethod

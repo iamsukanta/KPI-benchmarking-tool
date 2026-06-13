@@ -37,6 +37,7 @@ class Facility(Model):
     is_federation = models.BooleanField(default=False, db_index=True)
     federation = models.ForeignKey('self', on_delete=models.SET_NULL, related_name='facilities', blank=True, null=True)
     name = models.CharField(max_length=255, unique=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
     federal_state = models.BooleanField(default=False)
     beds = models.PositiveIntegerField(blank=True, null=True)
     rooms = models.PositiveIntegerField(blank=True, null=True)

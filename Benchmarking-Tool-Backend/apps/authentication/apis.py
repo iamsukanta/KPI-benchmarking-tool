@@ -23,6 +23,7 @@ from ..volulink.responses import (
     SuccessWithResultsResponse
 )
 from ..volulink.utils import send_html_email
+from ..facilities.models import Facility
 from .constants import REQUEST_TYPE_PASSWORD_RESET
 from .permissions import IsAdmin, IsFacilityManager, IsFederationManager
 from .models import Otp, UserInvitation, EmailVerificationToken, UserActivityLog
@@ -238,6 +239,8 @@ class ProfileApi(ViewSet):
 
     @staticmethod
     def create(request: Request) -> SuccessWithMessageResponse:
+        was_first_login = request.user.change_password_at_first_login
+
         serializer = ProfileSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -246,6 +249,13 @@ class ProfileApi(ViewSet):
 
         if 'new_password' in serializer.validated_data:
             UserActivityLog.log_password_change(request.user)
+
+            # First successful password change after onboarding: clear the
+            # forced-change flag and approve the user's linked facilities.
+            if was_first_login:
+                request.user.change_password_at_first_login = False
+                request.user.save(update_fields=['change_password_at_first_login'])
+                Facility.objects.filter(user=request.user).update(is_user_approved=True)
 
         return SuccessWithMessageResponse('Ihr Profil wurde erfolgreich aktualisiert.')
 

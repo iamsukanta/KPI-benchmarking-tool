@@ -19,9 +19,10 @@ import {
   faCalendarDays,
   faLandmark,
   faRulerCombined,
-  faBalanceScale
+  faLocationDot
 } from '@fortawesome/free-solid-svg-icons';
 import SearchableSelect from "@/components/searchable-select";
+import { GERMAN_STATES } from "@/lib/constants/germany";
 import { useAuth } from "@/context/auth-context";
 
 export default function FacilityUpdateForm({ id }: { id: string }) {
@@ -33,7 +34,7 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
   const [facility, setFacility] = useState<Facility>();
   const [form, setForm] = useState<FacilityFormData>({
     name: "",
-    federal_state: false,
+    region: "",
     beds: "",
     rooms: "",
     category: "",
@@ -71,12 +72,12 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
 
         setForm({
           name: facilityRes.results?.name ?? "",
+          region: facilityRes.results?.region ?? "",
           beds: facilityRes.results?.beds?.toString() ?? "",
           rooms: facilityRes.results?.rooms?.toString() ?? "",
           category: facilityRes.results?.category?.toString() ?? "",
           is_federation: facilityRes.results?.is_federation ?? false,
           federation: facilityRes.results?.federation?.toString() ?? "",
-          federal_state: facilityRes.results?.federal_state ?? false,
           opening_days_per_year: facilityRes.results?.opening_days_per_year?.toString() ?? "",
           operational_building_area: facilityRes.results?.operational_building_area?.toString() ?? "",
           total_property_area: facilityRes.results?.total_property_area?.toString() ?? ""
@@ -90,30 +91,15 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
     load();
   }, [id]);
 
-  function handleCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
-    }
-  }
-
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   }
 
-  function handleFederationChange(name: string, value: string) {
+  function handleSelectChange(name: string, value: string) {
     setForm(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
-  }
-
-  function handleFederationState() {
-    setForm(prev => ({
-      ...prev,
-      federal_state: ! prev.federal_state
-    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -267,22 +253,17 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
                 <div className="h-11 bg-slate-200 rounded"></div>
               </div>
             ) : (
-              <select
-                id="category"
+              <SearchableSelect
                 name="category"
                 value={form.category}
-                onChange={handleCategoryChange}
-                className={`w-full px-4 py-3 rounded-lg bg-white border ${
-                  errors.category ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-slate-300 focus:ring-brand-500 focus:border-brand-500'
-                } text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-colors`}
-              >
-                <option value="">Wählen Sie eine Kategorie aus</option>
-                {categories?.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Kategorie auswählen…"
+                options={categories.map(category => ({
+                  label: category.name,
+                  value: category.id.toString(),
+                }))}
+                error={!!errors.category}
+                onChange={handleSelectChange}
+              />
             )}
 
             {errors.category && (
@@ -348,6 +329,30 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
             )}
           </div>
 
+          <div>
+            <label
+              className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700"
+              htmlFor="region"
+            >
+              <FontAwesomeIcon icon={faLocationDot} className="w-4 h-4 text-slate-500" />
+              Region (Bundesland)
+            </label>
+            <SearchableSelect
+              name="region"
+              value={form.region}
+              placeholder="Bundesland auswählen…"
+              options={GERMAN_STATES}
+              error={!!errors.region}
+              onChange={handleSelectChange}
+            />
+            {errors.region && (
+              <p className="flex items-center gap-1.5 text-sm text-red-600 mt-2">
+                <FontAwesomeIcon icon={faExclamationCircle} className="w-3.5 h-3.5" />
+                {errors.region}
+              </p>
+            )}
+          </div>
+
           {user?.role === "admin" && (
             <>
               {!form.is_federation && (
@@ -371,11 +376,11 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
               ) : !form.is_federation && (
                 <SearchableSelect
                   name="federation"
-                  placeholder="Wählen sie einen verbund aus..."
+                  placeholder="Föderation auswählen…"
                   options={federations ?? []}
                   error={!!errors.federation}
                   value={form.federation}
-                  onChange={handleFederationChange}
+                  onChange={handleSelectChange}
                 />
               )}
             </>
@@ -493,29 +498,6 @@ export default function FacilityUpdateForm({ id }: { id: string }) {
                 </p>
               )}
             </div>
-          </div>
-
-          <div className="flex gap-3">
-            <label
-              className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700"
-              htmlFor="federal_state"
-            >
-              <FontAwesomeIcon icon={faBalanceScale} className="w-4 h-4 text-slate-500" />
-              Bundesstaat
-            </label>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={form.federal_state}
-              onClick={handleFederationState}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${form.federal_state ? 'bg-brand-600' : 'bg-slate-300'
-                }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${form.federal_state ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-              />
-            </button>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">

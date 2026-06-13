@@ -84,7 +84,7 @@ export default function FacilityDetailCreateFormPage({
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-10">
         <Link
           href={`/facilities/${facilityId}/detail`}

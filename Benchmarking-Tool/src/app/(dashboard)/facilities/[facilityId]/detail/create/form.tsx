@@ -228,33 +228,35 @@ export default function FacilityDetailCreateForm({
 
       <form onSubmit={onSubmitAction} noValidate className="space-y-6">
 
-        <Panel icon={faBed} title="Core Metrics" subtitle="Key operational figures for the year">
-          {coreFields.map(renderField)}
-        </Panel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <Panel icon={faBed} title="Core Metrics" subtitle="Key operational figures for the year">
+            {coreFields.map(renderField)}
+          </Panel>
 
-        <Panel icon={faHandHoldingHeart} title="Additional Income Sources" subtitle="Optional — fill in if applicable">
-          {incomeFields.map(renderField)}
-        </Panel>
+          <Panel icon={faHandHoldingHeart} title="Additional Income Sources" subtitle="Optional — fill in if applicable">
+            {incomeFields.map(renderField)}
+          </Panel>
 
-        <Panel icon={faMoneyBillTrendUp} title="Operating Costs" subtitle="Annual expenditure breakdown">
-          {costFields.map(renderField)}
-        </Panel>
+          <Panel icon={faMoneyBillTrendUp} title="Operating Costs" subtitle="Annual expenditure breakdown">
+            {costFields.map(renderField)}
+          </Panel>
 
-        {showV2Fields && (
-          <>
-            <Panel icon={faUserTie} title="Personalkosten je Bereich" subtitle="Optional — Jahresstunden und Lohnkosten je Bereich">
-              {personnelFields.map(renderField)}
-            </Panel>
+          {showV2Fields && (
+            <>
+              <Panel icon={faUserTie} title="Personalkosten je Bereich" subtitle="Optional — Jahresstunden und Lohnkosten je Bereich">
+                {personnelFields.map(renderField)}
+              </Panel>
 
-            <Panel icon={faWrench} title="Weitere Kosten" subtitle="Optional — nur für Hotels und Tagungshäuser">
-              {v2CostFields.map(renderField)}
-            </Panel>
+              <Panel icon={faWrench} title="Weitere Kosten" subtitle="Optional — nur für Hotels und Tagungshäuser">
+                {v2CostFields.map(renderField)}
+              </Panel>
 
-            <Panel icon={faUsers} title="Gruppen & Veranstaltungen" subtitle="Optional — nur für Hotels und Tagungshäuser">
-              {groupEventFields.map(renderField)}
-            </Panel>
-          </>
-        )}
+              <Panel icon={faUsers} title="Gruppen & Veranstaltungen" subtitle="Optional — nur für Hotels und Tagungshäuser">
+                {groupEventFields.map(renderField)}
+              </Panel>
+            </>
+          )}
+        </div>
 
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-6">
           <div

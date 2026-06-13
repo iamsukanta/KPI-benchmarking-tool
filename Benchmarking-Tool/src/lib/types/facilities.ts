@@ -82,6 +82,7 @@ export type Federation = {
 export type Facility = {
   id: number;
   name: string;
+  region?: string;
   category?: string;
   category_name?: string;
   is_federation?: boolean;
@@ -91,6 +92,7 @@ export type Facility = {
   rooms?: string;
   user?: string;
   user_name?: string;
+  user_email?: string;
   user_facility_role?: string;
   is_user_approved?: boolean;
   is_active?: boolean;

@@ -21,6 +21,7 @@ import BenchmarkRanking from "./benchmark-ranking";
 import FacilityComparison from "./facility-comparision";
 import BenchmarkInsights from "./benchmark-insights";
 import ExportBenchmark from "./export-benchmark";
+import SearchableSelect from "@/components/searchable-select";
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, PointElement, LineElement,
@@ -455,20 +456,20 @@ function SelectedFederation({ federation }: { federation: Federation }) {
           <div className="max-w-2xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <select
-                  value={selectedYear}
-                  onChange={e => { setSelectedYear(e.target.value); setFieldError(null); }}
-                  disabled={loadingYears}
-                  className={`w-full px-4 py-3 rounded-lg bg-white border text-slate-900 focus:outline-none focus:ring-2 transition-colors cursor-pointer ${fieldError
-                      ? "border-red-300 focus:ring-red-400 focus:border-red-400"
-                      : "border-slate-300 focus:ring-brand-500 focus:border-brand-500"
-                    }`}
-                >
-                  <option value="">{loadingYears ? "Jahre werden geladen…" : "Jahr Auswählen"}</option>
-                  {years.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
+                {loadingYears ? (
+                  <div className="w-full px-4 py-3 rounded-lg bg-white border border-slate-300 text-slate-400 text-sm">
+                    Jahre werden geladen…
+                  </div>
+                ) : (
+                  <SearchableSelect
+                    name="year"
+                    value={selectedYear}
+                    placeholder="Jahr auswählen…"
+                    options={years.map(year => ({ label: String(year), value: String(year) }))}
+                    error={!!fieldError}
+                    onChange={(_name, value) => { setSelectedYear(value); setFieldError(null); }}
+                  />
+                )}
                 {fieldError && (
                   <p className="flex items-center gap-1.5 text-xs text-red-600 mt-1.5">
                     <FontAwesomeIcon icon={faExclamationCircle} className="w-3 h-3" />

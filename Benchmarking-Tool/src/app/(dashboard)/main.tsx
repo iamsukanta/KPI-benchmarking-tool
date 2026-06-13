@@ -3,6 +3,7 @@
 import { useState } from "react";
 import RequireAuth from "@/components/require-auth";
 import Sidebar from '@/app/(dashboard)/sidebar';
+import ForcedPasswordChange from "@/app/(dashboard)/_components/forced-password-change";
 import { useAuth } from "@/context/auth-context";
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -21,6 +22,14 @@ export default function Main({
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  if (user?.change_password_at_first_login) {
+    return (
+      <RequireAuth>
+        <ForcedPasswordChange />
+      </RequireAuth>
+    );
+  }
 
   return (
     <RequireAuth>

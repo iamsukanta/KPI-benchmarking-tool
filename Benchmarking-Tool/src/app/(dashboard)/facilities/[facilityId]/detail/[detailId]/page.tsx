@@ -36,7 +36,7 @@ export default async function FacilityDetailUpdatePage({ params }: Props) {
   const res = await fetchFacilityYearlyData(facilityId, detailId);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-10">
         <Link
           href={`/facilities/${facilityId}/detail`}

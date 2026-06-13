@@ -75,7 +75,7 @@ export async function loginAction(
     path: "/",
   });
 
-  cookieStore.set("user", JSON.stringify({ id: data.id, name: data.name, email: data.email, role: data.role }), {
+  cookieStore.set("user", JSON.stringify({ id: data.id, name: data.name, email: data.email, role: data.role, change_password_at_first_login: data.change_password_at_first_login ?? false }), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
