@@ -1,7 +1,8 @@
 "use client";
 
-import React, { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction, useState } from "react";
 import { FacilityDetailFormData } from "@/lib/validators/facility";
+import { isV2Eligible } from "@/lib/facility-v2";
 import Link from "next/link";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -23,6 +24,7 @@ import {
   faHotel,
   faToggleOn,
   faToggleOff,
+  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 type FieldConfig = {
@@ -38,29 +40,97 @@ const coreFields: FieldConfig[] = [
   { name: "overnight_stays", label: "Übernachtungen", placeholder: "Übernachtungen im Laufe eines Jahres", icon: faBed },
   { name: "guests", label: "Anzahl der Ankünfte", placeholder: "Gesamtzahl der Gästeankünfte", icon: faUsers },
   { name: "rooms_sold", label: "Zimmer verkauft", placeholder: "Insgesamt verkaufte Zimmer", icon: faDoorOpen, optional: true },
-  { name: "total_revenue", label: "Gesamtumsatz", placeholder: "Gesamtumsatz in einem Jahr", icon: faMoneyBillTrendUp },
+  { name: "total_revenue", label: "Gesamtumsatz inkl. Spenden und Zuschüsse", placeholder: "Gesamtumsatz in einem Jahr", icon: faMoneyBillTrendUp },
 ];
 
 const costFields: FieldConfig[] = [
   { name: "personnel_costs", label: "Personalkosten", placeholder: "Gesamte Personalkosten", icon: faUserTie },
-  { name: "catering_costs", label: "Warenkosten / Cateringkosten", placeholder: "Kosten für Verpflegung und Waren", icon: faUtensils },
+  { name: "material_goods_costs", label: "Material / Wareneinkauf inkl. Hygiene", placeholder: "Kosten für Material und Wareneinkauf", icon: faUtensils },
   { name: "energy_costs", label: "Energiekosten", placeholder: "Gesamtenergiekosten", icon: faBolt },
-  { name: "cleaning_costs", label: "Reinigungskosten", placeholder: "Gesamte Reinigungskosten", icon: faBroom, optional: true },
-  { name: "maintenance_costs", label: "Sachkosten (gesamt)", placeholder: "Wartungs- und Betriebskosten", icon: faWrench },
+  { name: "outsourced_services_costs", label: "Einsatz von Fremdfirmen", placeholder: "Kosten für externe Dienstleister", icon: faBroom, optional: true },
+  { name: "other_operating_costs", label: "Sonstige Sachkosten (Werbung, Auto, ...)", placeholder: "Sonstige Betriebskosten", icon: faWrench },
+];
+
+// V2 / Netzwerk-2 cost fields — shown only for cat.1 + cat.2.
+const v2CostFields: FieldConfig[] = [
+  { name: "repair_maintenance_costs", label: "Reparaturkosten / Instandhaltung", placeholder: "Optional", icon: faWrench, optional: true },
+  { name: "depreciation_costs", label: "Abschreibungen", placeholder: "Optional", icon: faMoneyBillTrendUp, optional: true },
+  { name: "rent_lease_costs", label: "Pacht / Miete", placeholder: "Optional", icon: faHotel, optional: true },
+];
+
+// V2 / Netzwerk-2 group & event fields — shown only for cat.1 + cat.2.
+const groupEventFields: FieldConfig[] = [
+  { name: "total_groups", label: "Anzahl Gruppen / Seminare", placeholder: "Optional", icon: faUsers, optional: true },
+  { name: "own_groups", label: "Anzahl eigene Gruppen / Seminare", placeholder: "Optional", icon: faUsers, optional: true },
+  { name: "own_participants", label: "Anzahl eigene Teilnehmer", placeholder: "Optional", icon: faUsers, optional: true },
+  { name: "returning_groups", label: "Anzahl Stammgruppen", placeholder: "Optional", icon: faUsers, optional: true },
+];
+
+// V2 / Netzwerk-2 per-area personnel block (5 areas x {Jahresstunden, Lohnkosten}) — cat.1 + cat.2.
+const personnelFields: FieldConfig[] = [
+  { name: "pers_admin_hours", label: "Verwaltung – Jahresstunden", placeholder: "Optional", icon: faCalendarWeek, optional: true },
+  { name: "pers_admin_wage", label: "Verwaltung – Lohnkosten", placeholder: "Optional", icon: faUserTie, optional: true },
+  { name: "pers_kitchen_hours", label: "Hauswirtschaft-Küche – Jahresstunden", placeholder: "Optional", icon: faCalendarWeek, optional: true },
+  { name: "pers_kitchen_wage", label: "Hauswirtschaft-Küche – Lohnkosten", placeholder: "Optional", icon: faUserTie, optional: true },
+  { name: "pers_cleaning_hours", label: "Hauswirtschaft-Reinigung – Jahresstunden", placeholder: "Optional", icon: faCalendarWeek, optional: true },
+  { name: "pers_cleaning_wage", label: "Hauswirtschaft-Reinigung – Lohnkosten", placeholder: "Optional", icon: faUserTie, optional: true },
+  { name: "pers_tech_hours", label: "Technik – Jahresstunden", placeholder: "Optional", icon: faCalendarWeek, optional: true },
+  { name: "pers_tech_wage", label: "Technik – Lohnkosten", placeholder: "Optional", icon: faUserTie, optional: true },
+  { name: "pers_edu_hours", label: "Pädagogik – Jahresstunden", placeholder: "Optional", icon: faCalendarWeek, optional: true },
+  { name: "pers_edu_wage", label: "Pädagogik – Lohnkosten", placeholder: "Optional", icon: faUserTie, optional: true },
 ];
 
 const incomeFields: FieldConfig[] = [
-  { name: "income_from_donations", label: "Einnahmen aus Spenden", placeholder: "Optional", icon: faHandHoldingHeart, optional: true },
-  { name: "income_from_conferences", label: "Einnahmen aus Konferenzen", placeholder: "Optional", icon: faMicrophone, optional: true },
-  { name: "income_from_catering", label: "Einnahmen aus der Gastronomie", placeholder: "Optional", icon: faCutlery, optional: true },
-  { name: "income_from_accomodation", label: "Einkünfte aus Beherbergung", placeholder: "Optional", icon: faHotel, optional: true },
+  { name: "donations_subsidies_income", label: "Einnahmen aus Spenden und Zuschüsse", placeholder: "Optional", icon: faHandHoldingHeart, optional: true },
+  { name: "other_income", label: "Sonstige Einnahmen", placeholder: "Optional", icon: faMicrophone, optional: true },
+  { name: "catering_income", label: "Verpflegung", placeholder: "Optional", icon: faCutlery, optional: true },
+  { name: "accommodation_income", label: "Einkünfte aus Beherbergung", placeholder: "Optional", icon: faHotel, optional: true },
 ];
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+function Panel({
+  icon,
+  title,
+  subtitle,
+  children,
+  defaultOpen = true,
+}: {
+  icon: any;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="pb-3 border-b border-slate-200 mb-5">
-      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{title}</h3>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className={`w-full flex items-center gap-3 px-6 py-4 text-left bg-gradient-to-r from-brand-50 to-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-inset transition-colors ${open ? 'border-b border-slate-200' : ''}`}
+      >
+        <div className="w-9 h-9 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0">
+          <FontAwesomeIcon icon={icon} className="w-4 h-4 text-brand-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
+        <div
+          className={`w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : 'rotate-0'}`}
+        >
+          <FontAwesomeIcon icon={faChevronDown} className="w-3.5 h-3.5 text-slate-500" />
+        </div>
+      </button>
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">{children}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -72,7 +142,8 @@ export default function FacilityDetailCreateForm({
   errors,
   setErrorsAction,
   onSubmitAction,
-  submitting
+  submitting,
+  categoryName
 }: {
   id: string;
   form: FacilityDetailFormData;
@@ -81,7 +152,9 @@ export default function FacilityDetailCreateForm({
   errors: Record<string, string>;
   onSubmitAction: (e: React.FormEvent) => void;
   submitting: boolean;
+  categoryName?: string;
 }) {
+  const showV2Fields = isV2Eligible(categoryName);
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
     setFormAction(prev => ({ ...prev, [name]: value }));
@@ -153,47 +226,54 @@ export default function FacilityDetailCreateForm({
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <form onSubmit={onSubmitAction} noValidate className="p-6 space-y-8">
+      <form onSubmit={onSubmitAction} noValidate className="space-y-6">
 
-          <section>
-            <SectionHeader title="Core Metrics" subtitle="Key operational figures for the year" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {coreFields.map(renderField)}
-            </div>
-          </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <Panel icon={faBed} title="Core Metrics" subtitle="Key operational figures for the year">
+            {coreFields.map(renderField)}
+          </Panel>
 
-          <section>
-            <SectionHeader title="Operating Costs" subtitle="Annual expenditure breakdown" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {costFields.map(renderField)}
-            </div>
-          </section>
+          <Panel icon={faHandHoldingHeart} title="Additional Income Sources" subtitle="Optional — fill in if applicable">
+            {incomeFields.map(renderField)}
+          </Panel>
 
-          <section>
-            <SectionHeader title="Additional Income Sources" subtitle="Optional — fill in if applicable" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {incomeFields.map(renderField)}
-            </div>
-          </section>
+          <Panel icon={faMoneyBillTrendUp} title="Operating Costs" subtitle="Annual expenditure breakdown">
+            {costFields.map(renderField)}
+          </Panel>
 
-          <section className="pt-2">
-            <div
-              className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
-              onClick={handleToggle}
-            >
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Veröffentlichen Sie diesen Datensatz</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {form.is_published ? "Diese jährlichen Daten werden für andere sichtbar sein." : "Diese Jahresdaten bleiben als Entwurf bestehen."}
-                </p>
-              </div>
-              <FontAwesomeIcon
-                icon={form.is_published ? faToggleOn : faToggleOff}
-                className={`w-8 h-8 transition-colors ${form.is_published ? 'text-brand-600' : 'text-slate-400'}`}
-              />
+          {showV2Fields && (
+            <>
+              <Panel icon={faUserTie} title="Personalkosten je Bereich" subtitle="Optional — Jahresstunden und Lohnkosten je Bereich">
+                {personnelFields.map(renderField)}
+              </Panel>
+
+              <Panel icon={faWrench} title="Weitere Kosten" subtitle="Optional — nur für Hotels und Tagungshäuser">
+                {v2CostFields.map(renderField)}
+              </Panel>
+
+              <Panel icon={faUsers} title="Gruppen & Veranstaltungen" subtitle="Optional — nur für Hotels und Tagungshäuser">
+                {groupEventFields.map(renderField)}
+              </Panel>
+            </>
+          )}
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-6">
+          <div
+            className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors"
+            onClick={handleToggle}
+          >
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Veröffentlichen Sie diesen Datensatz</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {form.is_published ? "Diese jährlichen Daten werden für andere sichtbar sein." : "Diese Jahresdaten bleiben als Entwurf bestehen."}
+              </p>
             </div>
-          </section>
+            <FontAwesomeIcon
+              icon={form.is_published ? faToggleOn : faToggleOff}
+              className={`w-8 h-8 transition-colors ${form.is_published ? 'text-brand-600' : 'text-slate-400'}`}
+            />
+          </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
             <Link
@@ -224,8 +304,8 @@ export default function FacilityDetailCreateForm({
               )}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </>
   );
 }

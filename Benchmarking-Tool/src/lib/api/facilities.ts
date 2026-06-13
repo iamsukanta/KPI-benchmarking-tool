@@ -97,6 +97,19 @@ export async function destroyFacility(id: string): Promise<FacilityResponse> {
   return res.json();
 }
 
+export async function sendFacilityCredentials(
+  data: { id: number; name: string; email: string; is_federation: boolean }
+): Promise<ApiMessageResponse> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/proxy/facilities/send-credentials/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: {
+      "content-type": "application/json"
+    }
+  });
+  return res.json();
+}
+
 export async function benchmarkApi(data: BenchmarkFormData): Promise<BenchmarkSuccessResponse | BenchmarkErrorResponse> {
   const year = data.year;
   const categoryId = data.category;

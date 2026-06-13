@@ -4,6 +4,7 @@ import { useState } from "react";
 import { InternalBenchmark } from "@/lib/types/benchmark";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import SearchableSelect from "@/components/searchable-select";
 
 type SectionKey = keyof InternalBenchmark;
 
@@ -217,17 +218,15 @@ export default function FacilityComparison({ benchmark }: { benchmark: InternalB
         <label className="block text-sm font-semibold text-slate-700 mb-2">
           Einrichtung auswählen
         </label>
-        <select
-          value={selectedName}
-          onChange={e => setSelectedName(e.target.value)}
-          className="w-full sm:max-w-sm px-4 py-3 rounded-lg bg-white border border-slate-300 text-slate-900 text-sm
-            focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors cursor-pointer"
-        >
-          <option value="">– Einrichtung wählen –</option>
-          {allFacilities.map(name => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
+        <div className="w-full sm:max-w-sm">
+          <SearchableSelect
+            name="facility"
+            value={selectedName}
+            placeholder="– Einrichtung wählen –"
+            options={allFacilities.map(name => ({ label: name, value: name }))}
+            onChange={(_name, value) => setSelectedName(value)}
+          />
+        </div>
       </div>
 
       {hasSelection ? (

@@ -28,6 +28,8 @@ const KPI_SECTIONS: {
   { key: "revenue_kpis",           label: "Erlöskennzahlen",                   tabColor: C.emerald },
   { key: "cost_efficiency_kpis",   label: "Kosten & Effizienzkennzahlen",      tabColor: C.amberLight },
   { key: "category_specific_kpis", label: "Kategorie-spezifische Kennzahlen",  tabColor: C.purple },
+  { key: "group_event_kpis",       label: "Gruppen & Veranstaltungen",         tabColor: C.brand },
+  { key: "personnel_area_kpis",    label: "Personalkosten je Bereich",         tabColor: C.emerald },
 ];
 
 // ─── LabelEntry ───────────────────────────────────────────────────────────────
@@ -53,40 +55,49 @@ function normaliseLabelEntry(entry: unknown): LabelEntry {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Round half-up to 2 decimals (Math.round rounds .5 toward +∞; apply on magnitude). */
+function round2HalfUp(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value) * 100 + 1e-9) / 100;
+}
+
 function fmtNum(value: number | undefined | null): number | string {
-  if (value === undefined || value === null || isNaN(value as number)) return "—";
-  return value as number;
+  if (value === null || value === undefined || isNaN(value as number)) return "-";
+  return round2HalfUp(value as number);
 }
 
 /**
  * Returns a string with unit appended when a unit is provided,
- * otherwise returns the raw number (for native Excel formatting).
+ * otherwise returns the raw (rounded) number for native Excel formatting.
  */
 function fmtWithUnit(value: number | undefined | null, unit?: string): number | string {
   const base = fmtNum(value);
-  if (unit && base !== "—") return `${base} ${unit}`;
+  if (unit && typeof base === "number") return `${base} ${unit}`;
   return base;
 }
 
-function deltaText(my: number, cat: number): string {
-  if (cat === 0) return "—";
+/** invert: cost metric where higher-than-benchmark is bad → shown as negative. */
+function deltaText(my: number | null, cat: number | null, invert = false): string {
+  if (my === null || cat === null || cat === 0) return "-";
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return "≈ Parity";
-  return (pct > 0 ? "▲ " : "▼ ") + Math.abs(pct).toFixed(1) + "%";
+  const good = invert ? pct < 0 : pct > 0;
+  return (good ? "▲ +" : "▼ -") + round2HalfUp(Math.abs(pct)) + "%";
 }
 
-function deltaFill(my: number, cat: number): string {
-  if (cat === 0) return C.lightGrey;
+function deltaFill(my: number | null, cat: number | null, invert = false): string {
+  if (my === null || cat === null || cat === 0) return C.lightGrey;
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return C.lightGrey;
-  return pct > 0 ? "FFD1FAE5" : "FFFEE2E2";
+  const good = invert ? pct < 0 : pct > 0;
+  return good ? "FFD1FAE5" : "FFFEE2E2";
 }
 
-function deltaFontColor(my: number, cat: number): string {
-  if (cat === 0) return C.grey;
+function deltaFontColor(my: number | null, cat: number | null, invert = false): string {
+  if (my === null || cat === null || cat === 0) return C.grey;
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return C.grey;
-  return pct > 0 ? C.green : C.red;
+  const good = invert ? pct < 0 : pct > 0;
+  return good ? C.green : C.red;
 }
 
 function headerStyle(
@@ -123,7 +134,7 @@ function cellStyle(
       left:   { style: "thin", color: { argb: C.border } },
       right:  { style: "thin", color: { argb: C.border } },
     },
-    numFmt: "#,##0.###",
+    numFmt: "#,##0.##",
   };
 }
 
@@ -221,6 +232,8 @@ function addKpiSheet(
     properties: { tabColor: { argb: tabColor } },
   });
 
+  const invert = sectionKey === "personnel_area_kpis";
+
   const aggregations: { key: keyof CategoryWideBenchmark; label: string }[] = [
     { key: "median",  label: "Median" },
     { key: "average", label: "Durchschnitt" },
@@ -237,8 +250,8 @@ function addKpiSheet(
     const aggData    = benchmark[aggKey] as CategoryWideBenchmark["median"];
     const sectionData = aggData[sectionKey] as {
       labels: unknown[];
-      my_data: number[];
-      category_data: number[];
+      my_data: (number | null)[];
+      category_data: (number | null)[];
       q1?: number[];
       q3?: number[];
       participant_count?: number[];
@@ -307,8 +320,8 @@ function addKpiSheet(
 
     // ── Data rows ──────────────────────────────────────────────────────────
     labelEntries.forEach((entry, i) => {
-      const my       = my_data[i]       ?? 0;
-      const cat      = category_data[i] ?? 0;
+      const my       = my_data[i]       ?? null;
+      const cat      = category_data[i] ?? null;
       const unit     = entry.unit ?? "";
       const rowFill  = i % 2 === 0 ? C.white : C.lightGrey;
       const hasHelp  = !!entry.help_text?.trim();
@@ -400,7 +413,7 @@ function addKpiSheet(
 
       if (hasCount) {
         const countCell = ws.getCell(currentRow, col++);
-        countCell.value = participant_count![i] ?? "—";
+        countCell.value = participant_count![i] ?? "-";
         countCell.style = {
           ...cellStyle(rowFill, C.grey, false, "center"),
           alignment: { vertical: "top", horizontal: "center" },
@@ -409,37 +422,41 @@ function addKpiSheet(
 
       // ── Delta ─────────────────────────────────────────────────────────
       const deltaCell = ws.getCell(currentRow, col++);
-      deltaCell.value = deltaText(my, cat);
+      deltaCell.value = deltaText(my, cat, invert);
       deltaCell.style = {
-        ...cellStyle(deltaFill(my, cat), deltaFontColor(my, cat), true, "center"),
+        ...cellStyle(deltaFill(my, cat, invert), deltaFontColor(my, cat, invert), true, "center"),
         alignment: { vertical: "top", horizontal: "center" },
       };
 
       // ── Status ────────────────────────────────────────────────────────
       const statusCell = ws.getCell(currentRow, col++);
-      if (cat !== 0) {
+      if (my !== null && cat !== null && cat !== 0) {
         const pct = ((my - cat) / cat) * 100;
+        // good = the favourable direction. For cost metrics (invert) being below
+        // the benchmark is good; the Über/Unter label stays factual either way.
+        const good = invert ? pct < 0 : pct > 0;
+        const position = pct > 0 ? "Über" : "Unter";
         if (Math.abs(pct) < 0.5) {
           statusCell.value = "≈ Im Schnitt";
           statusCell.style = {
             ...cellStyle(rowFill, C.grey, false, "center"),
             alignment: { vertical: "top", horizontal: "center" },
           };
-        } else if (pct > 0) {
-          statusCell.value = "✓ Über Durchschnitt";
+        } else if (good) {
+          statusCell.value = `✓ ${position} Durchschnitt`;
           statusCell.style = {
             ...cellStyle("FFD1FAE5", C.green, true, "center"),
             alignment: { vertical: "top", horizontal: "center" },
           };
         } else {
-          statusCell.value = "✗ Unter Durchschnitt";
+          statusCell.value = `✗ ${position} Durchschnitt`;
           statusCell.style = {
             ...cellStyle("FFFEE2E2", C.red, true, "center"),
             alignment: { vertical: "top", horizontal: "center" },
           };
         }
       } else {
-        statusCell.value = "—";
+        statusCell.value = "-";
         statusCell.style = {
           ...cellStyle(rowFill, C.grey, false, "center"),
           alignment: { vertical: "top", horizontal: "center" },
@@ -488,6 +505,8 @@ export async function exportBenchmarkExcel({
   addCoverSheet(wb, facilityName, categoryName, year);
 
   KPI_SECTIONS.forEach(({ key, label, tabColor }) => {
+    // Skip V2 sections (group/event, personnel) that are absent for cat.3 + cat.4.
+    if (!benchmark.median?.[key]) return;
     addKpiSheet(wb, key, label, tabColor, facilityName, benchmark);
   });
 

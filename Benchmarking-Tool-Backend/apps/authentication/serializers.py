@@ -56,6 +56,7 @@ class UserLoginSerializer(TokenObtainPairSerializer):
         data['name'] = self.user.first_name
         data['email'] = self.user.email
         data['role'] = self.user.role
+        data['change_password_at_first_login'] = self.user.change_password_at_first_login
         return data
 
 

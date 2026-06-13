@@ -3,7 +3,7 @@ import { z } from "zod";
 export const facilitySchema = z.object({
   category: z.string().min(1, "Wählen Sie eine Kategorie aus."),
   name: z.string().min(1, "Der Name der Einrichtung ist erforderlich."),
-  federal_state: z.boolean().optional(),
+  region: z.string().min(1, "Region (Bundesland) ist erforderlich."),
   beds: z.string().optional(),
   rooms: z.string().optional(),
   opening_days_per_year: z.string().min(1, "Es werden Öffnungstage pro Jahr benötigt."),
@@ -32,17 +32,35 @@ export const facilityDetailSchema = z.object({
     { message: "Die verkauften Zimmer müssen eine ganze Zahl sein." }
   ),
   personnel_costs: z.string().min(1, "Personalkosten fallen an."),
-  catering_costs: z.string().min(1, "Die Kosten für Waren/Catering werden benötigt."),
+  material_goods_costs: z.string().min(1, "Die Kosten für Material / Wareneinkauf werden benötigt."),
   energy_costs: z.string().min(1, "Die Energiekosten werden benötigt."),
-  cleaning_costs: z.string().optional().refine(
+  outsourced_services_costs: z.string().optional().refine(
     (val) => val === undefined || val === "" || Number.isInteger(Number(val)),
-    { message: "Die Reinigungskosten müssen eine ganze Zahl sein." }
+    { message: "Der Einsatz von Fremdfirmen muss eine ganze Zahl sein." }
   ),
-  maintenance_costs: z.string().min(1, "Die Kosten für Sachkosten (gesamt) werden übernommen."),
-  income_from_donations: z.string().optional(),
-  income_from_conferences: z.string().optional(),
-  income_from_catering: z.string().optional(),
-  income_from_accomodation: z.string().optional(),
+  other_operating_costs: z.string().min(1, "Die sonstigen Sachkosten werden benötigt."),
+  donations_subsidies_income: z.string().optional(),
+  other_income: z.string().optional(),
+  catering_income: z.string().optional(),
+  accommodation_income: z.string().optional(),
+  // V2 / Netzwerk-2 — optional, shown only for cat.1 + cat.2
+  repair_maintenance_costs: z.string().optional(),
+  depreciation_costs: z.string().optional(),
+  rent_lease_costs: z.string().optional(),
+  total_groups: z.string().optional(),
+  own_groups: z.string().optional(),
+  own_participants: z.string().optional(),
+  returning_groups: z.string().optional(),
+  pers_admin_hours: z.string().optional(),
+  pers_admin_wage: z.string().optional(),
+  pers_kitchen_hours: z.string().optional(),
+  pers_kitchen_wage: z.string().optional(),
+  pers_cleaning_hours: z.string().optional(),
+  pers_cleaning_wage: z.string().optional(),
+  pers_tech_hours: z.string().optional(),
+  pers_tech_wage: z.string().optional(),
+  pers_edu_hours: z.string().optional(),
+  pers_edu_wage: z.string().optional(),
   is_published: z.boolean()
 });
 

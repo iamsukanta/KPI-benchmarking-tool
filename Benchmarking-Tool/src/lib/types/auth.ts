@@ -4,7 +4,8 @@ export type AuthUser = {
   id: number;
   name: string | null;
   email: string;
-  role: string
+  role: string;
+  change_password_at_first_login?: boolean;
 };
 
 export type AuthResponse = {
@@ -14,6 +15,7 @@ export type AuthResponse = {
   name: string | null;
   email: string;
   role: string;
+  change_password_at_first_login?: boolean;
 };
 
 export type SignupResponse = {

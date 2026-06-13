@@ -15,7 +15,8 @@ import {
   faChevronDown,
   faChevronRight,
   faCloudArrowUp,
-  faUserPlus
+  faUserPlus,
+  faBuildingUser
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Sidebar({ sidebarOpen }: { sidebarOpen: boolean }) {
@@ -238,6 +239,19 @@ export default function Sidebar({ sidebarOpen }: { sidebarOpen: boolean }) {
 
         {user?.role === "admin" && (
           <>
+            <Link
+              href="/all-facilities"
+              className={linkClasses(
+                pathname === "/all-facilities"
+              )}
+            >
+              <FontAwesomeIcon
+                icon={faBuildingUser}
+                className={`w-4 h-4 ${pathname === "/all-facilities" ? "text-white" : "text-slate-400 group-hover:text-amber-400"} transition-colors`}
+              />
+              <span>Alle Einrichtungen &amp; Föderation</span>
+            </Link>
+
             <Link
               href="/joining-requests"
               className={linkClasses(

@@ -25,6 +25,7 @@ export type FacilityDetail = {
   id: string;
   facility_id?: string;
   facility_name?: string;
+  category_name?: string;
   federation_id?: string;
   federation_name?: string;
   beds?: string;
@@ -35,15 +36,35 @@ export type FacilityDetail = {
   overnight_stays: string;
   total_costs: string;
   total_revenue: string;
-  income_from_donations: string;
-  income_from_conferences: string;
-  income_from_catering: string;
-  income_from_accomodation: string;
+  donations_subsidies_income: string;
+  other_income: string;
+  catering_income: string;
+  accommodation_income: string;
   personnel_costs: string;
-  catering_costs: string;
+  material_goods_costs: string;
   energy_costs: string;
-  cleaning_costs: string;
-  maintenance_costs: string;
+  outsourced_services_costs: string;
+  other_operating_costs: string;
+  // V2 / Netzwerk-2 cost fields (cat.1 + cat.2 only)
+  repair_maintenance_costs?: string;
+  depreciation_costs?: string;
+  rent_lease_costs?: string;
+  // V2 / Netzwerk-2 group & event fields (cat.1 + cat.2 only)
+  total_groups?: string;
+  own_groups?: string;
+  own_participants?: string;
+  returning_groups?: string;
+  // V2 / Netzwerk-2 per-area personnel block (cat.1 + cat.2 only)
+  pers_admin_hours?: string;
+  pers_admin_wage?: string;
+  pers_kitchen_hours?: string;
+  pers_kitchen_wage?: string;
+  pers_cleaning_hours?: string;
+  pers_cleaning_wage?: string;
+  pers_tech_hours?: string;
+  pers_tech_wage?: string;
+  pers_edu_hours?: string;
+  pers_edu_wage?: string;
   is_published: boolean;
   last_published_at: string;
 }
@@ -61,6 +82,7 @@ export type Federation = {
 export type Facility = {
   id: number;
   name: string;
+  region?: string;
   category?: string;
   category_name?: string;
   is_federation?: boolean;
@@ -70,6 +92,7 @@ export type Facility = {
   rooms?: string;
   user?: string;
   user_name?: string;
+  user_email?: string;
   user_facility_role?: string;
   is_user_approved?: boolean;
   is_active?: boolean;

@@ -48,34 +48,44 @@ const KPI_SECTIONS: {
   { key: "revenue_kpis",           label: "Erlöskennzahlen",                   accent: [16, 185, 129] },
   { key: "cost_efficiency_kpis",   label: "Kosten & Effizienzkennzahlen",      accent: [245, 158, 11] },
   { key: "category_specific_kpis", label: "Kategorie-spezifische Kennzahlen",  accent: [168, 85, 247] },
+  { key: "group_event_kpis",       label: "Gruppen & Veranstaltungen",         accent: [99, 102, 241] },
+  { key: "personnel_area_kpis",    label: "Personalkosten je Bereich",         accent: [16, 185, 129] },
 ];
 
+/** Round half-up to 2 decimals (Math.round rounds .5 toward +∞; apply on magnitude). */
+function round2HalfUp(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value) * 100 + 1e-9) / 100;
+}
+
 function fmt(value: number | undefined | null): string {
-  if (value === undefined || value === null || isNaN(value as number)) return "—";
+  if (value === null || value === undefined || isNaN(value as number)) return "-";
   const v = value as number;
-  if (Math.abs(v) >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
-  if (Math.abs(v) >= 1_000) return (v / 1_000).toFixed(2) + "k";
-  if (!Number.isInteger(v) && v !== 0) return v.toFixed(2);
-  return v.toLocaleString("de-DE");
+  if (Math.abs(v) >= 1_000_000) return round2HalfUp(v / 1_000_000) + "M";
+  if (Math.abs(v) >= 1_000) return round2HalfUp(v / 1_000) + "k";
+  // Dot decimal notation (e.g. 1,234.56) to match the Excel export and the UI.
+  return round2HalfUp(v).toLocaleString("en-US");
 }
 
 function fmtWithUnit(value: number | undefined | null, unit?: string): string {
   const base = fmt(value);
-  return unit && base !== "—" ? `${base} ${unit}` : base;
+  return unit && typeof value === "number" && isFinite(value) ? `${base} ${unit}` : base;
 }
 
-function delta(my: number, cat: number): string {
-  if (cat === 0) return "—";
+/** invert: cost metric where higher-than-benchmark is bad → shown as negative. */
+function delta(my: number | null, cat: number | null, invert = false): string {
+  if (my === null || cat === null || cat === 0) return "-";
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return "~ Gleichstand";
-  return (pct > 0 ? "+ " : "- ") + Math.abs(pct).toFixed(2) + "%";
+  const good = invert ? pct < 0 : pct > 0;
+  return (good ? "+ " : "- ") + round2HalfUp(Math.abs(pct)) + "%";
 }
 
-function deltaColor(my: number, cat: number): [number, number, number] {
-  if (cat === 0) return BRAND.grey;
+function deltaColor(my: number | null, cat: number | null, invert = false): [number, number, number] {
+  if (my === null || cat === null || cat === 0) return BRAND.grey;
   const pct = ((my - cat) / cat) * 100;
   if (Math.abs(pct) < 0.5) return BRAND.grey;
-  return pct > 0 ? BRAND.green : BRAND.red;
+  const good = invert ? pct < 0 : pct > 0;
+  return good ? BRAND.green : BRAND.red;
 }
 
 function drawTitlePage(
@@ -196,15 +206,18 @@ function drawAggregationBlock(
   KPI_SECTIONS.forEach((section) => {
     const sectionData = aggData[section.key] as {
       labels: unknown[];
-      my_data: number[];
-      category_data: number[];
+      my_data: (number | null)[];
+      category_data: (number | null)[];
       q1?: number[];
       q3?: number[];
       participant_count?: number[];
       min_values?: number[];
       max_values?: number[];
       facility_values?: Record<string, number[]>;
-    };
+    } | undefined;
+
+    // V2 sections (group/event, personnel) are absent for cat.3 + cat.4.
+    if (!sectionData) return;
 
     const rawLabels: unknown[] = sectionData.labels ?? [];
     if (rawLabels.length === 0) return;
@@ -214,6 +227,7 @@ function drawAggregationBlock(
 
     const { my_data, category_data, q1, q3, participant_count, min_values, max_values } =
       sectionData;
+    const invert = section.key === "personnel_area_kpis";
 
     y = drawSectionHeader(doc, section.label, section.accent, y);
 
@@ -230,14 +244,14 @@ function drawAggregationBlock(
     const deltaColIdx = head.length - 1;
 
     const body = labelEntries.map((entry, i) => {
-      const my  = my_data[i]  ?? 0;
-      const cat = category_data[i] ?? 0;
+      const my  = my_data[i]  ?? null;
+      const cat = category_data[i] ?? null;
       const unit = entry.unit ?? "";
       const row: string[] = [entry.label, fmtWithUnit(my, unit), fmtWithUnit(cat, unit)];
       if (hasQ1Q3)  row.push(fmtWithUnit(q1![i], unit), fmtWithUnit(q3![i], unit));
       if (hasMinMax) row.push(fmtWithUnit(min_values![i], unit), fmtWithUnit(max_values![i], unit));
-      if (hasCount)  row.push(String(participant_count![i] ?? "—"));
-      row.push(delta(my, cat));
+      if (hasCount)  row.push(String(participant_count![i] ?? "-"));
+      row.push(delta(my, cat, invert));
       return row;
     });
 
@@ -304,9 +318,9 @@ function drawAggregationBlock(
         // Colour the delta column
         if (data.section === "body" && data.column.index === deltaColIdx) {
           const rowIdx = data.row.index;
-          const my  = my_data[rowIdx]  ?? 0;
-          const cat = category_data[rowIdx] ?? 0;
-          const [r, g, b] = deltaColor(my, cat);
+          const my  = my_data[rowIdx]  ?? null;
+          const cat = category_data[rowIdx] ?? null;
+          const [r, g, b] = deltaColor(my, cat, invert);
           data.cell.styles.textColor = [r, g, b];
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.halign = "right";

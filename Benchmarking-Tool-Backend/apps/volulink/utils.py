@@ -1,9 +1,28 @@
+import secrets
+import string
 from typing import Any
 
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+
+
+def generate_temporary_password(length: int = 12) -> str:
+    """Generate a random, human-typable temporary password.
+
+    Guarantees at least one lowercase letter, one uppercase letter and one digit
+    so it satisfies common password policies. Ambiguous characters are avoided.
+    """
+    alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    while True:
+        password = ''.join(secrets.choice(alphabet) for _ in range(length))
+        if (
+            any(c.islower() for c in password)
+            and any(c.isupper() for c in password)
+            and any(c.isdigit() for c in password)
+        ):
+            return password
 
 
 def send_html_email(

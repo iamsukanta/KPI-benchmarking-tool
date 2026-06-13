@@ -4,6 +4,7 @@ from threading import Thread
 from typing import Any
 
 from django.conf import settings
+from django.utils import timezone
 import openpyxl
 from rest_framework.viewsets import ViewSet
 from rest_framework.request import Request
@@ -13,8 +14,9 @@ from rest_framework.status import HTTP_201_CREATED
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 
-from ..volulink.utils import send_html_email
+from ..volulink.utils import send_html_email, generate_temporary_password
 from ..volulink.responses import ErrorWithMessageResponse, SuccessWithMessageResponse, SuccessWithResultsResponse
 from ..authentication.constants import ROLE_ADMIN, ROLE_FACILITY_MANAGER, ROLE_FEDERATION_MANAGER
 from ..authentication.permissions import IsAdmin, IsFacilityManager, IsFederationManager, MultiRolePermission
@@ -237,7 +239,7 @@ class FacilityApi(ViewSet):
                 is_user_approved=True
             )
         )
-        serializer = FacilityWithDetailSerializer(facility)
+        serializer = FacilityWithDetailSerializer(facility, context={'facility': facility})
         return SuccessWithResultsResponse(serializer.data)
     
     @staticmethod
@@ -283,7 +285,7 @@ class FacilityApi(ViewSet):
         )
         data = request.data.copy()
         data['facility'] = facility.id
-        serializer = FacilityDetailSerializer(data=data)
+        serializer = FacilityDetailSerializer(data=data, context={'facility': facility})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return SuccessWithMessageResponse('The facility\'s detail has been successfully updated.')
@@ -291,26 +293,34 @@ class FacilityApi(ViewSet):
     @action(methods=['get'], detail=True, url_path=r'detail/(?P<facility_detail_pk>[^/.]+)')
     def retrieve_detail(self, request: Request, pk: int, facility_detail_pk: int) -> SuccessWithResultsResponse:
         facility_detail = get_object_or_404(
-            FacilityDetail.objects.select_related('facility__federation'),
+            FacilityDetail.objects.select_related('facility__federation', 'facility__category'),
             pk=facility_detail_pk,
             facility_id=pk,
             facility__user=request.user,
             facility__is_user_approved=True
         )
-        serializer = FacilityDetailRetrieveSerializer(facility_detail)
+        serializer = FacilityDetailRetrieveSerializer(
+            facility_detail,
+            context={'facility': facility_detail.facility}
+        )
         return SuccessWithResultsResponse(serializer.data)
-    
+
     @staticmethod
     @retrieve_detail.mapping.put
     def update_unpublished_detail(request: Request, pk: int, facility_detail_pk: int) -> SuccessWithMessageResponse:
         facility_detail = get_object_or_404(
-            FacilityDetail,
+            FacilityDetail.objects.select_related('facility__category'),
             pk=facility_detail_pk,
             facility_id=pk,
             facility__user=request.user,
             facility__is_user_approved=True
         )
-        serializer = FacilityDetailSerializer(facility_detail, data=request.data, partial=True)
+        serializer = FacilityDetailSerializer(
+            facility_detail,
+            data=request.data,
+            partial=True,
+            context={'facility': facility_detail.facility}
+        )
         serializer.is_valid(raise_exception=True)
 
         if serializer.validated_data['is_published']:
@@ -357,6 +367,109 @@ class FacilityApi(ViewSet):
         facility = get_object_or_404(Facility, pk=pk)
         facility.delete()
         return SuccessWithMessageResponse('Die Einrichtung wurde erfolgreich gelöscht.')
+
+    @action(methods=['post'], detail=False, url_path='send-credentials')
+    def send_credentials(self, request: Request) -> SuccessWithMessageResponse | ErrorWithMessageResponse:
+        entity_id = request.data.get('id')
+        is_federation = bool(request.data.get('is_federation', False))
+        name = (request.data.get('name') or '').strip()
+        email = (request.data.get('email') or '').strip().lower()
+
+        if not entity_id:
+            return ErrorWithMessageResponse('Eine ID ist erforderlich.')
+        if not name or not email:
+            return ErrorWithMessageResponse('Name und E-Mail-Adresse sind erforderlich.')
+
+        entity = (
+            Facility.objects
+            .select_related('user')
+            .filter(pk=entity_id, is_federation=is_federation)
+            .first()
+        )
+        if entity is None:
+            return ErrorWithMessageResponse(
+                'Föderation nicht gefunden.' if is_federation else 'Einrichtung nicht gefunden.'
+            )
+
+        if entity.is_user_approved:
+            return ErrorWithMessageResponse(
+                'Der Benutzer dieser Einrichtung wurde bereits freigegeben.'
+            )
+
+        current_user = entity.user
+        is_resend = current_user is not None and current_user.email.lower() == email
+
+        if not is_resend and User.objects.filter(email__iexact=email).exists():
+            return ErrorWithMessageResponse(
+                'Dieser Benutzer ist bereits als Einrichtungsleiter, Verbundsleiter oder Admin registriert.'
+            )
+
+        first_name, _, last_name = name.partition(' ')
+        temporary_password = generate_temporary_password()
+
+        if is_resend:
+            user = current_user
+            user.first_name = first_name
+            user.last_name = last_name
+            user.password = make_password(temporary_password)
+            user.change_password_at_first_login = True
+            user.save(update_fields=[
+                'first_name', 'last_name', 'password', 'change_password_at_first_login'
+            ])
+        else:
+            user = User(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                role=ROLE_FEDERATION_MANAGER if is_federation else ROLE_FACILITY_MANAGER,
+                change_password_at_first_login=True,
+                is_email_verified=True,
+                email_verified_at=timezone.now()
+            )
+            user.password = make_password(temporary_password)
+            user.save()
+            entity.user = user
+            entity.save(update_fields=['user'])
+
+        thread = Thread(
+            target=self.send_credentials_email,
+            args=(entity, user, name, email, temporary_password)
+        )
+        thread.daemon = True
+        thread.start()
+
+        return SuccessWithMessageResponse('Die Zugangsdaten wurden erfolgreich versendet.')
+
+    @staticmethod
+    def send_credentials_email(
+        facility: Facility,
+        user: 'User',
+        name: str,
+        recipient_email: str,
+        temporary_password: str
+    ) -> None:
+        is_federation_manager = facility.is_federation or user.role == ROLE_FEDERATION_MANAGER
+
+        template_name = (
+            'emails/federation_manager_credentials.html'
+            if is_federation_manager
+            else 'emails/facility_manager_credentials.html'
+        )
+
+        context = {
+            'name': name,
+            'login_url': settings.APP_LINK,
+            'login_email': user.email,
+            'temporary_password': temporary_password,
+            'logo_link': settings.APP_LINK + '/hh-logo-color.png',
+        }
+
+        send_html_email(
+            subject='Ihr Zugang zum VoluLink Benchmarking-Tool — Aktion erforderlich',
+            template_name=template_name,
+            context=context,
+            recipient_list=[recipient_email]
+        )
 
 
 class InternalBenchmarkApi(ViewSet):
@@ -534,11 +647,11 @@ class MasterDataApi(ViewSet):
             'rooms_sold': 18,
             'overnight_stays': 25,
             'total_revenue': 28,
-            'income_from_donations': 29,
+            'donations_subsidies_income': 29,
             'personnel_costs': 33,
-            'catering_costs': 32,
+            'material_goods_costs': 32,
             'energy_costs': 34,
-            'maintenance_costs': 35,
+            'other_operating_costs': 35,
         }
 
         FIRST_DATA_COL = 1
@@ -566,12 +679,12 @@ class MasterDataApi(ViewSet):
                     'rooms_sold': self.safe_int(self.get_cell(sheet, ROW['rooms_sold'], col)) or 0,
                     'overnight_stays': self.safe_int(self.get_cell(sheet, ROW['overnight_stays'], col)) or 0,
                     'total_revenue': self.safe_decimal(self.get_cell(sheet, ROW['total_revenue'], col)) or Decimal('0.00'),
-                    'income_from_donations': self.safe_decimal(self.get_cell(sheet, ROW['income_from_donations'], col)),
+                    'donations_subsidies_income': self.safe_decimal(self.get_cell(sheet, ROW['donations_subsidies_income'], col)),
                     'personnel_costs': self.safe_decimal(self.get_cell(sheet, ROW['personnel_costs'], col)) or Decimal('0.00'),
-                    'catering_costs': self.safe_decimal(self.get_cell(sheet, ROW['catering_costs'], col)) or Decimal('0.00'),
+                    'material_goods_costs': self.safe_decimal(self.get_cell(sheet, ROW['material_goods_costs'], col)) or Decimal('0.00'),
                     'energy_costs': self.safe_decimal(self.get_cell(sheet, ROW['energy_costs'], col)) or Decimal('0.00'),
-                    'cleaning_costs': Decimal('0.00'),
-                    'maintenance_costs': self.safe_decimal(self.get_cell(sheet, ROW['maintenance_costs'], col)) or Decimal('0.00'),
+                    'outsourced_services_costs': Decimal('0.00'),
+                    'other_operating_costs': self.safe_decimal(self.get_cell(sheet, ROW['other_operating_costs'], col)) or Decimal('0.00'),
                 },
             })
             col += 2

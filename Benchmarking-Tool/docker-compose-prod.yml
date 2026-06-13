@@ -1,0 +1,13 @@
+services:
+  benchmark:
+    container_name: benchmark
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - volulink
+
+networks:
+  volulink:
+    external: true

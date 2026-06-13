@@ -37,6 +37,7 @@ class Facility(Model):
     is_federation = models.BooleanField(default=False, db_index=True)
     federation = models.ForeignKey('self', on_delete=models.SET_NULL, related_name='facilities', blank=True, null=True)
     name = models.CharField(max_length=255, unique=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
     federal_state = models.BooleanField(default=False)
     beds = models.PositiveIntegerField(blank=True, null=True)
     rooms = models.PositiveIntegerField(blank=True, null=True)
@@ -121,28 +122,28 @@ class FacilityDetail(Model):
     rooms_sold = models.PositiveIntegerField(default=0, blank=True)
     overnight_stays = models.PositiveIntegerField()
     total_revenue = models.DecimalField(max_digits=12, decimal_places=2)
-    income_from_donations = models.DecimalField(
+    donations_subsidies_income = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         blank=True,
         null=True,
         verbose_name='Revenue Share Donations, Grants / Subsidies'
     )
-    income_from_conferences = models.DecimalField(
+    other_income = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         blank=True,
         null=True,
-        verbose_name='Revenue Share Conferences'
+        verbose_name='Other Income'
     )
-    income_from_catering = models.DecimalField(
+    catering_income = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         blank=True,
         null=True,
         verbose_name='Revenue Share Catering'
     )
-    income_from_accomodation = models.DecimalField(
+    accommodation_income = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         blank=True,
@@ -150,26 +151,53 @@ class FacilityDetail(Model):
         verbose_name='Revenue Share Accommodation'
     )
     personnel_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    catering_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Cost of Goods / Catering Costs')
+    material_goods_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Material / Goods incl. Hygiene')
     energy_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    cleaning_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0, blank=True)
-    maintenance_costs = models.DecimalField(
+    outsourced_services_costs = models.DecimalField(max_digits=12, decimal_places=2, default=0, blank=True, verbose_name='Outsourced Services Costs')
+    other_operating_costs = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0,
-        verbose_name='Maintenance and Other Operating Costs'
+        verbose_name='Other Operating Costs'
     )
+
+    # V2 / Netzwerk-2 cost fields (cat.1 + cat.2 only) — nullable, NULL != 0
+    repair_maintenance_costs = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Repair & Maintenance Costs')
+    depreciation_costs = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Depreciation Costs')
+    rent_lease_costs = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Rent / Lease Costs')
+
+    # V2 / Netzwerk-2 group & event fields (cat.1 + cat.2 only) — nullable
+    total_groups = models.PositiveIntegerField(blank=True, null=True, verbose_name='Total Groups / Seminars')
+    own_groups = models.PositiveIntegerField(blank=True, null=True, verbose_name='Own Groups / Seminars')
+    own_participants = models.PositiveIntegerField(blank=True, null=True, verbose_name='Own Participants')
+    returning_groups = models.PositiveIntegerField(blank=True, null=True, verbose_name='Returning Groups')
+
+    # V2 / Netzwerk-2 per-area personnel block (cat.1 + cat.2 only) — 5 areas x {hours, wage}, nullable
+    pers_admin_hours = models.PositiveIntegerField(blank=True, null=True, verbose_name='Administration Annual Hours')
+    pers_admin_wage = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Administration Wage Costs')
+    pers_kitchen_hours = models.PositiveIntegerField(blank=True, null=True, verbose_name='Housekeeping-Kitchen Annual Hours')
+    pers_kitchen_wage = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Housekeeping-Kitchen Wage Costs')
+    pers_cleaning_hours = models.PositiveIntegerField(blank=True, null=True, verbose_name='Housekeeping-Cleaning Annual Hours')
+    pers_cleaning_wage = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Housekeeping-Cleaning Wage Costs')
+    pers_tech_hours = models.PositiveIntegerField(blank=True, null=True, verbose_name='Technical Annual Hours')
+    pers_tech_wage = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Technical Wage Costs')
+    pers_edu_hours = models.PositiveIntegerField(blank=True, null=True, verbose_name='Pedagogy Annual Hours')
+    pers_edu_wage = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, verbose_name='Pedagogy Wage Costs')
+
     total_costs = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     is_published = models.BooleanField(default=False, db_index=True)
     last_published_at = models.DateTimeField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
+        # NOTE: total_costs intentionally excludes the V2 cost fields
+        # (repair_maintenance_costs, depreciation_costs, rent_lease_costs) so that
+        # existing benchmark outputs remain identical post-migration (AC-09).
         self.total_costs = (
             self.personnel_costs +
-            self.catering_costs +
+            self.material_goods_costs +
             self.energy_costs +
-            self.cleaning_costs +
-            self.maintenance_costs
+            self.outsourced_services_costs +
+            self.other_operating_costs
         )
         if self.is_published:
             self.last_published_at = timezone.now()
