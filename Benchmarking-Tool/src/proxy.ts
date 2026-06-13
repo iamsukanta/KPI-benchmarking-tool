@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookie-options";
 
 export async function proxy(req: NextRequest) {
   const publicRoutes = [
@@ -34,20 +35,8 @@ export async function proxy(req: NextRequest) {
   const { access: newAccess, refresh: newRefresh } = await res.json();
 
   const response = NextResponse.next();
-  response.cookies.set("access", newAccess, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 15,
-    path: "/",
-  });
-  response.cookies.set("refresh", newRefresh, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  response.cookies.set("access", newAccess, accessCookieOptions);
+  response.cookies.set("refresh", newRefresh, refreshCookieOptions);
 
   return response;
 }

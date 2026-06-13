@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookie-options";
 
 export async function POST(req: NextRequest) {
   const oldRefresh = (await cookies()).get("refresh")?.value;
@@ -24,20 +25,8 @@ export async function POST(req: NextRequest) {
   const { access, refresh } = await remoteRes.json();
   const response = NextResponse.json({ success: true });
 
-  response.cookies.set("access", access, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 15,
-    path: "/",
-  });
-  response.cookies.set("refresh", refresh, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  response.cookies.set("access", access, accessCookieOptions);
+  response.cookies.set("refresh", refresh, refreshCookieOptions);
 
   return response;
 }

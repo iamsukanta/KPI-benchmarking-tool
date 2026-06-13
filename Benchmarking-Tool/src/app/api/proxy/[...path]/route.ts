@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookie-options";
 
 const PUBLIC_PATHS = new Set([
   "auth/login",
@@ -91,20 +92,8 @@ function setTokenCookies(
   response: NextResponse,
   tokens: { newAccess: string; newRefresh: string }
 ) {
-  response.cookies.set("access", tokens.newAccess, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 15,
-    path: "/",
-  });
-  response.cookies.set("refresh", tokens.newRefresh, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  response.cookies.set("access", tokens.newAccess, accessCookieOptions);
+  response.cookies.set("refresh", tokens.newRefresh, refreshCookieOptions);
 }
 
 async function handler(

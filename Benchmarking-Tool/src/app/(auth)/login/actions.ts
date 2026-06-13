@@ -4,6 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { loginSchema } from "@/lib/validators/auth";
 import { AuthResponse } from "@/lib/types/auth";
+import {
+  accessCookieOptions,
+  refreshCookieOptions,
+  userCookieOptions,
+} from "@/lib/auth/cookie-options";
 
 export type LoginState = {
   errors: Record<string, string>;
@@ -59,29 +64,11 @@ export async function loginAction(
 
   const cookieStore = await cookies();
 
-  cookieStore.set("access", data.access, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 15,
-    path: "/",
-  });
+  cookieStore.set("access", data.access, accessCookieOptions);
 
-  cookieStore.set("refresh", data.refresh, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  cookieStore.set("refresh", data.refresh, refreshCookieOptions);
 
-  cookieStore.set("user", JSON.stringify({ id: data.id, name: data.name, email: data.email, role: data.role, change_password_at_first_login: data.change_password_at_first_login ?? false }), {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  cookieStore.set("user", JSON.stringify({ id: data.id, name: data.name, email: data.email, role: data.role, change_password_at_first_login: data.change_password_at_first_login ?? false }), userCookieOptions);
 
   redirect("/");
 }
