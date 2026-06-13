@@ -36,7 +36,9 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = [
     'localhost',
-    'benchmark-api',  # Docker internal service hostname
+    '127.0.0.1',
+    '217.160.247.163',        # ← add your VPS public IP
+    'benchmark-api',          # Docker internal service hostname
     'benchmarking-api-dev.volulink.de',
     'benchmarking-api.volulink.de',
 ]
@@ -91,6 +93,9 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'http://localhost:3002',
+    'http://217.160.247.163:3002',    # ← already exists ✅
+    'http://217.160.247.163:5000',    # ← add backend origin too
     'http://benchmarking-dev.volulink.de',
     'http://benchmarking.volulink.de',
     'https://benchmarking-dev.volulink.de',
@@ -98,6 +103,9 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    'http://217.160.247.163',         # ← add bare IP
+    'http://217.160.247.163:3002',    # ← add frontend origin
+    'http://217.160.247.163:5000',    # ← already exists ✅
     'http://benchmarking-api-dev.volulink.de',
     'http://benchmarking-api.volulink.de',
     'https://benchmarking-api-dev.volulink.de',
