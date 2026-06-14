@@ -1,15 +1,16 @@
 "use client";
 
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "@/app/styles/globals.scss";
 import { AuthProvider } from "@/context/auth-context";
 import Public from "@/components/public";
 
-const inter = Inter({
+const inter = localFont({
+  src: "../../fonts/Inter-latin.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ['400', '500', '600', '700', '800']
+  weight: "400 800",
+  display: "swap",
 });
 
 export const metadata: Metadata = {

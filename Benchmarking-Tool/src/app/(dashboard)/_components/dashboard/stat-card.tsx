@@ -38,7 +38,7 @@ export default function StatCard({
           )}
         </div>
         <p className="text-sm font-medium text-slate-600 mb-1">{label}</p>
-        <p className="text-3xl font-bold text-slate-800">{value}</p>
+        <p className="text-3xl font-bold text-slate-800 overflow-x-auto whitespace-nowrap">{value}</p>
         <p className="text-xs text-slate-500 mt-2">{sub ?? linkLabel ?? " "}</p>
       </div>
     </div>

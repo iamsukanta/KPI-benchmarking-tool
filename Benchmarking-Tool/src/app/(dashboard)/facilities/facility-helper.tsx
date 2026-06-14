@@ -413,7 +413,7 @@ function FederationGroup({
   const isOwnFederation = !isAdmin && user?.id === federation.user;
 
   return (
-    <div className="rounded-xl border border-brand-200 shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-brand-200 shadow-sm">
       <div className="bg-gradient-to-r from-brand-50 to-brand-50 border-b border-brand-200 px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">

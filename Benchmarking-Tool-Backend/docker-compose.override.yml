@@ -1,0 +1,7 @@
+# Dev-only overrides. Auto-merged into docker-compose.yml on `docker compose up`.
+# Runs Django's runserver (auto-reload) instead of gunicorn, source live-mounted.
+services:
+  benchmark-api:
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/usr/src/api

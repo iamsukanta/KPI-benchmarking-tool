@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Source_Sans_3 } from "next/font/google";
+import localFont from "next/font/local";
 import "@/app/styles/globals.scss";
 import NoAuth from "./_components/no-auth";
 import Image from 'next/image';
 
-const sourceSans = Source_Sans_3({
-  subsets: ["latin"],
+const sourceSans = localFont({
+  src: "../fonts/SourceSans3-latin.woff2",
   variable: "--font-source-sans",
-  weight: ["300", "400", "600", "700", "800"],
+  weight: "300 800",
+  display: "swap",
 });
 
 export const dynamic = 'force-dynamic'

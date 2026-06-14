@@ -349,8 +349,10 @@ export default function FacilityManagerDashboard({ results }: { results: Dashboa
               </div>
             </div>
           </div>
-          <div className="p-6" style={{ height: '350px' }}>
-            <Bar data={aggregatedRevenueData} options={aggregatedRevenueOptions} />
+          <div className="p-6 overflow-x-auto">
+            <div className="min-w-[480px]" style={{ height: '350px' }}>
+              <Bar data={aggregatedRevenueData} options={aggregatedRevenueOptions} />
+            </div>
           </div>
         </div>
 
@@ -366,8 +368,10 @@ export default function FacilityManagerDashboard({ results }: { results: Dashboa
               </div>
             </div>
           </div>
-          <div className="p-6" style={{ height: '350px' }}>
-            <Bar data={facilitiesComparisonData} options={facilitiesComparisonOptions} />
+          <div className="p-6 overflow-x-auto">
+            <div className="min-w-[480px]" style={{ height: '350px' }}>
+              <Bar data={facilitiesComparisonData} options={facilitiesComparisonOptions} />
+            </div>
           </div>
         </div>
       </div>

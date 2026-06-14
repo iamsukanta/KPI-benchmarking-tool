@@ -142,7 +142,7 @@ export default function BenchmarkClient({
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
           <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
             <FontAwesomeIcon
@@ -232,7 +232,7 @@ export default function BenchmarkClient({
       </div>
 
       {selectedFacility && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
             <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <FontAwesomeIcon

@@ -434,7 +434,7 @@ function SelectedFederation({ federation }: { federation: Federation }) {
 
   return (
     <>
-      <div className="rounded-xl border border-brand-200 shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-brand-200 shadow-sm">
         <div className="bg-gradient-to-r from-brand-50 to-brand-50 border-b border-brand-200 px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0">

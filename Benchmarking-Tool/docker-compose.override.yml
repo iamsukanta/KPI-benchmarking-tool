@@ -1,0 +1,15 @@
+# Dev-only overrides. Auto-merged into docker-compose.yml on `docker compose up`.
+# Runs Next.js in dev mode with Fast Refresh, source live-mounted from the host.
+# Note: forced onto Webpack (--webpack). Turbopack's watcher does not detect
+# file changes through a Windows/WSL2 Docker bind mount; Webpack + WATCHPACK_POLLING does.
+services:
+  benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: npm run dev -- --webpack
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - WATCHPACK_POLLING=true

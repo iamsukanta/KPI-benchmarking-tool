@@ -41,6 +41,7 @@ export default function Main({
             className={`
             flex-1 flex flex-col
             transition-all duration-300 ease-in-out
+            overflow-x-auto
             ${sidebarOpen ? "ml-64" : "ml-0"}
             lg:ml-0
           `}

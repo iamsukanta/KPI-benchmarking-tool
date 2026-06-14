@@ -330,8 +330,10 @@ function FederationView({ federation }: { federation: FederationStat }) {
               </div>
             </div>
           </div>
-          <div className="p-6" style={{ height: 350 }}>
-            <Bar data={combinedChartData} options={barOptions} />
+          <div className="p-6 overflow-x-auto">
+            <div className="min-w-[480px]" style={{ height: 350 }}>
+              <Bar data={combinedChartData} options={barOptions} />
+            </div>
           </div>
         </div>
 
@@ -347,8 +349,10 @@ function FederationView({ federation }: { federation: FederationStat }) {
               </div>
             </div>
           </div>
-          <div className="p-6" style={{ height: 350 }}>
-            <Bar data={facilitiesChartData} options={barOptions} />
+          <div className="p-6 overflow-x-auto">
+            <div className="min-w-[480px]" style={{ height: 350 }}>
+              <Bar data={facilitiesChartData} options={barOptions} />
+            </div>
           </div>
         </div>
       </div>
@@ -510,8 +514,10 @@ function AllFederationsView({ federations }: { federations: FederationStat[] }) 
               </div>
             </div>
           </div>
-          <div className="p-6" style={{ height: 350 }}>
-            <Bar data={crossFedChart} options={crossFedOptions} />
+          <div className="p-6 overflow-x-auto">
+            <div className="min-w-[480px]" style={{ height: 350 }}>
+              <Bar data={crossFedChart} options={crossFedOptions} />
+            </div>
           </div>
         </div>
 
@@ -527,8 +533,10 @@ function AllFederationsView({ federations }: { federations: FederationStat[] }) 
               </div>
             </div>
           </div>
-          <div className="p-6" style={{ height: 350 }}>
-            <Bar data={occupancyData} options={occupancyOptions} />
+          <div className="p-6 overflow-x-auto">
+            <div className="min-w-[480px]" style={{ height: 350 }}>
+              <Bar data={occupancyData} options={occupancyOptions} />
+            </div>
           </div>
         </div>
       </div>
