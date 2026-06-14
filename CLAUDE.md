@@ -51,7 +51,7 @@ Browser
 | jsPDF + jspdf-autotable | 4.2.0 / 5.0.7 | PDF generation |
 | FontAwesome | react-fontawesome 3.1.1 + free-*-svg-icons 7.1.0 | Icons |
 
-> Notes: there is **no test framework or runner** configured (`npm` scripts are `dev`/`build`/`start`/`lint` only). `package.json` pins transitive overrides for `minimatch`/`glob`/`rimraf`.
+> Notes: Next 16 uses **Turbopack** by default for both `dev` and `build`. There is **no test framework or runner** configured (`npm` scripts are `dev`/`build`/`start`/`lint` only). `package.json` pins transitive overrides for `minimatch`/`glob`/`rimraf`.
 
 ### Backend
 | Dependency | Version | Purpose |
@@ -108,6 +108,7 @@ app/
     _theme.scss             # Theme variables
     _style.scss             # Global styles
     globals.scss            # @use entry point
+  fonts/                    # Self-hosted .woff2 (next/font/local): SourceSans3, Inter
 
 components/                 # Truly shared helpers/UI
   benchmark-chart.ts        # Chart.js dataset/config builders
@@ -155,6 +156,8 @@ lib/
 - **Tailwind CSS 4** for all utility classes (no `tailwind.config` file — uses `@tailwindcss/postcss` plugin)
 - SCSS files in `src/app/styles/` hold design tokens and global resets only
 - Import with `@use` (not `@import`) in SCSS files
+- **Fonts are self-hosted** via `next/font/local` from `src/app/fonts/` (Source Sans 3 + Inter, latin subset, variable weight) — **not** `next/font/google`. This keeps the production build offline-safe; Google Fonts is fetched at build time and was breaking Docker builds
+- Card/panel containers use `overflow-hidden` for rounded-corner clipping; wide content (tables, bar charts) sits in an inner `overflow-x-auto` wrapper (with a `min-w-*` for charts) so it scrolls instead of being clipped — do not strip `overflow-hidden` from progress bars, collapsible menus, accordions, or modals where it is functional
 
 ### State Management
 - **React Context** (`auth-context.tsx`) for global user state — no Redux/Zustand
@@ -322,11 +325,13 @@ APP_LINK=http://localhost:3000   # used in email links
 
 ## Running Locally
 
+Each project dir has a `docker-compose.override.yml` that Compose **auto-merges on a bare `docker compose up`**, turning the stack into a hot-reload **dev** setup. Production is run explicitly with `-f docker-compose-prod.yml` (the override is *not* applied then).
+
 ### Backend
 ```bash
 cd Benchmarking-Tool-Backend
-docker-compose up          # starts api (8000) + MySQL (3306)
-# or without docker:
+docker compose up -d --build   # dev: override → runserver + source bind-mount (live reload); api :8000, MySQL :3306
+# or bare-metal:
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
@@ -335,18 +340,27 @@ python manage.py runserver
 ### Frontend
 ```bash
 cd Benchmarking-Tool
+docker compose up -d --build   # dev: override → Dockerfile.dev + `next dev`, source bind-mount, hot reload; http://localhost:3000
+# or bare-metal:
 npm install
-npm run dev                # http://localhost:3000
+npm run dev
 ```
 
+**Frontend Docker dev mode** (`docker-compose.override.yml` + `Dockerfile.dev`):
+- `Dockerfile.dev` skips `next build` (dev compiles on demand); source is bind-mounted and `node_modules` is kept in an anonymous volume
+- Dev is forced onto **Webpack** (`npm run dev -- --webpack`) with `WATCHPACK_POLLING=true`. **Why:** Turbopack's file watcher does **not** detect edits through a Windows/WSL2 Docker bind mount; Webpack + polling restores Fast Refresh. (Running the repo from the WSL2 Linux filesystem instead of `D:\` avoids this and keeps Turbopack.)
+- `.dockerignore` excludes `node_modules`, `.next`, `.git` so a host-side build artifact can't poison the build context
+- A `--build` is only needed when dependencies (`package.json` / `requirements.txt`) or a Dockerfile change — **not** for code edits
+
 ### Production (Docker)
-Both services require the external `volulink` Docker network:
+Both services require the external `volulink` network and use the real `Dockerfile` (frontend: `next build` → `next start`):
 ```bash
-docker network create volulink
-# then in each project directory:
-docker-compose up -d
+docker network create volulink      # once
+# in each project directory:
+docker compose -f docker-compose-prod.yml up -d --build
 ```
-Backend runs: `gunicorn -w 4 -k uvicorn.workers.UvicornWorker core.asgi:application`
+- Frontend prod is served on host port **3002**; backend runs `gunicorn -w 4 -k uvicorn.workers.UvicornWorker core.asgi:application`
+- `container_name: benchmark` is shared by the dev and prod frontend stacks, so only one can run at a time
 
 ---
 

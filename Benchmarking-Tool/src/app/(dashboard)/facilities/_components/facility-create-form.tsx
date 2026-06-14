@@ -83,9 +83,13 @@ export default function FacilityCreateForm() {
     setForm(prev => ({
       ...prev,
       is_federation: !prev.is_federation,
-      ...(!prev.is_federation ? { rooms: "", beds: "" } : {}),
+      // Federations don't record category, opening days, rooms/beds or areas —
+      // clear them so stale values aren't validated or submitted.
+      ...(!prev.is_federation
+        ? { rooms: "", beds: "", category: "", opening_days_per_year: "", operational_building_area: "", total_property_area: "" }
+        : {}),
     }));
-    setErrors(prev => ({ ...prev, rooms: "", beds: "" }));
+    setErrors(prev => ({ ...prev, rooms: "", beds: "", category: "", opening_days_per_year: "", operational_building_area: "", total_property_area: "" }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -109,14 +113,13 @@ export default function FacilityCreateForm() {
     }
 
     try {
-      const { rooms, beds, federation, operational_building_area, total_property_area, ...rest } = result.data;
+      const { rooms, beds, federation, category, opening_days_per_year, operational_building_area, total_property_area, ...rest } = result.data;
       const payload = result.data.is_federation
       ? {
+        // A federation submits no category/opening days/rooms/beds.
         ...rest,
-        ...(operational_building_area ? { operational_building_area } : {}),
-        ...(total_property_area ? { total_property_area } : {}),
       } : {
-        rooms, beds, ...rest,
+        rooms, beds, category, opening_days_per_year, ...rest,
         ...(federation !== "0" ? { federation } : { federation: "" }),
         ...(operational_building_area ? { operational_building_area } : {}),
         ...(total_property_area ? { total_property_area } : {}),
@@ -152,7 +155,7 @@ export default function FacilityCreateForm() {
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-6">
           <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200 bg-slate-50">
             <div className="flex items-center gap-3">
@@ -177,6 +180,7 @@ export default function FacilityCreateForm() {
             </button>
           </div>
 
+          {!form.is_federation && (
           <div>
             <label
               className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700"
@@ -211,6 +215,7 @@ export default function FacilityCreateForm() {
               </p>
             )}
           </div>
+          )}
 
           <div>
             <label
@@ -218,7 +223,7 @@ export default function FacilityCreateForm() {
               htmlFor="name"
             >
               <FontAwesomeIcon icon={faBuilding} className="w-4 h-4 text-slate-500" />
-              Name der Einrichtung
+              {form.is_federation ? "Name des Verbandes" : "Name der Einrichtung"}
             </label>
             <input
               type="text"
@@ -226,7 +231,7 @@ export default function FacilityCreateForm() {
               name="name"
               value={form.name}
               onChange={handleInputChange}
-              placeholder="Enter facility name"
+              placeholder={form.is_federation ? "Name des Verbandes eingeben" : "Name der Einrichtung eingeben"}
               className={`w-full px-4 py-3 rounded-lg bg-white border ${errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-slate-300 focus:ring-brand-500 focus:border-brand-500'
                 } text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-colors`}
             />
@@ -238,6 +243,7 @@ export default function FacilityCreateForm() {
             )}
           </div>
 
+          {!form.is_federation && (
           <div>
             <label
               className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700"
@@ -263,6 +269,7 @@ export default function FacilityCreateForm() {
               </p>
             )}
           </div>
+          )}
 
           <div>
             <label
@@ -372,6 +379,7 @@ export default function FacilityCreateForm() {
             </div>
           )}
 
+          {!form.is_federation && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label
@@ -425,6 +433,7 @@ export default function FacilityCreateForm() {
               )}
             </div>
           </div>
+          )}
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-slate-200">
             <Link

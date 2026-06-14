@@ -64,10 +64,12 @@ export default function FacilityTableAdmin({
                   </div>
                 </div>
 
+                {item.category_name && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-100 text-brand-700">
                   <FontAwesomeIcon icon={faTag} className="w-3 h-3" />
                   <span className="text-xs font-medium">{item.category_name}</span>
                 </div>
+                )}
               </div>
 
               <div className="p-5 space-y-3">

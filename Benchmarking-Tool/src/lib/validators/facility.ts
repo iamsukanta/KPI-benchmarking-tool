@@ -1,18 +1,26 @@
 import { z } from "zod";
 
 export const facilitySchema = z.object({
-  category: z.string().min(1, "Wählen Sie eine Kategorie aus."),
+  // category + opening_days are required only for facilities; a federation is a
+  // parent/aggregator node and records neither (validated conditionally below).
+  category: z.string().optional(),
   name: z.string().min(1, "Der Name der Einrichtung ist erforderlich."),
   region: z.string().min(1, "Region (Bundesland) ist erforderlich."),
   beds: z.string().optional(),
   rooms: z.string().optional(),
-  opening_days_per_year: z.string().min(1, "Es werden Öffnungstage pro Jahr benötigt."),
+  opening_days_per_year: z.string().optional(),
   operational_building_area: z.string().optional(),
   total_property_area: z.string().optional(),
   is_federation: z.boolean().optional(),
   federation: z.string().optional()
 }).superRefine((data, ctx) => {
   if (! data.is_federation) {
+    if (! data.category || data.category.length < 1) {
+      ctx.addIssue({ code: "custom", message: "Wählen Sie eine Kategorie aus.", path: ["category"] });
+    }
+    if (! data.opening_days_per_year || data.opening_days_per_year.length < 1) {
+      ctx.addIssue({ code: "custom", message: "Es werden Öffnungstage pro Jahr benötigt.", path: ["opening_days_per_year"] });
+    }
     if (! data.beds || data.beds.length < 1) {
       ctx.addIssue({ code: "custom", message: "Bett ist erforderlich.", path: ["beds"] });
     }
