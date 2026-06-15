@@ -1,6 +1,6 @@
-const ACCESS_MAX_AGE = 60 * 15;
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 7;
-const USER_MAX_AGE = 60 * 60 * 24 * 7;
+const ACCESS_MAX_AGE = 60 * 60;
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 30;
+const USER_MAX_AGE = 60 * 60 * 24 * 30;
 
 // Secure cookies are dropped by browsers over plain HTTP. NODE_ENV cannot be
 // relied on here because `next start` always forces it to "production", so the

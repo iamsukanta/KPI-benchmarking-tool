@@ -265,7 +265,7 @@ class FacilityApi(ViewSet):
     def update(request: Request, pk: int) -> SuccessWithMessageResponse:
         facility = get_object_or_404(Facility, pk=pk)
 
-        if request.user.role == IsAdmin:
+        if request.user.role == ROLE_ADMIN:
             serializer = FacilitySerializer(facility, data=request.data, partial=True)
         else:
             serializer = FacilityRestrictedSerializer(facility, data=request.data, partial=True)
